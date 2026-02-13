@@ -715,6 +715,10 @@ export default function App() {
               <li>The first action step you will complete within the next 7 days</li>
             </ul>
 
+            <p className="mt-4 text-sm text-stone-700 leading-relaxed">
+              Note: Saved progress is stored locally on the same device and browser profile. Your work will remain available across days if you use the same browser profile and do not clear site data. Progress may be lost if you clear your browser cache or site data, use private/incognito mode, or switch browsers or devices. To prevent loss, we recommend backing up your work by clicking Export JSON and saving the file. You can later restore your progress by selecting Import JSON and uploading that file.
+            </p>
+
             <div className="mt-7 flex flex-wrap gap-2 justify-end">
               <button
                 onClick={exportProgressAsJson}
