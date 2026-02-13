@@ -29,6 +29,7 @@ import {
   Lightbulb,
   Target
 } from 'lucide-react';
+import awmLogo from '/awm-logo.png';
 
 const firebaseConfig = typeof __firebase_config !== 'undefined'
   ? JSON.parse(__firebase_config)
@@ -497,52 +498,55 @@ export default function App() {
   return (
     <div className="min-h-screen bg-stone-50 font-sans text-stone-900 flex flex-col md:flex-row">
       {/* Sidebar */}
-      <aside className="w-full md:w-72 lg:w-80 bg-white border-r border-stone-200 flex flex-col h-auto md:h-screen md:sticky md:top-0 shrink-0">
-        <div className="px-6 pt-8 pb-6 border-b border-stone-200">
-          <img src="/awm-logo.png" alt="Able Wealth Management" className="h-10 w-auto" />
-          <p className="text-sm text-stone-400 mt-2">Operations Self-Assessment</p>
+      <aside className="w-full md:w-64 lg:w-72 bg-white border-r border-stone-200 flex flex-col h-auto md:h-screen md:sticky md:top-0 shrink-0">
+        <div className="px-5 py-5 border-b border-stone-100">
+          <img src={awmLogo} alt="Able Wealth Management" className="h-8 w-auto" />
         </div>
 
-        <nav className="flex-1 overflow-y-auto py-3 px-3">
+        <div className="px-3 pt-4 pb-2">
+          <p className="px-3 text-[11px] font-semibold uppercase tracking-wider text-stone-400">Assessment</p>
+        </div>
+
+        <nav className="flex-1 overflow-y-auto px-3 pb-3">
           {SECTIONS.map((section, idx) => {
             const isActive = activeSection === idx;
             const prog = sectionProgress[idx];
             const isDone = prog.percent === 100;
-            const Icon = ICON_MAP[section.icon];
             return (
               <button
                 key={section.id}
                 onClick={() => { setActiveSection(idx); window.scrollTo(0, 0); }}
-                className={`w-full flex items-center gap-3 px-3 py-3 rounded-lg text-left transition-all mb-0.5
+                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-all mb-px relative
                   ${isActive
-                    ? 'bg-stone-100 text-stone-900'
-                    : 'text-stone-500 hover:bg-stone-50 hover:text-stone-700'
+                    ? 'bg-stone-800 text-white'
+                    : 'text-stone-600 hover:bg-stone-50 hover:text-stone-900'
                   }`}
               >
-                <span className={`shrink-0 ${isDone ? 'text-sage-500' : isActive ? 'text-stone-700' : 'text-stone-400'}`}>
-                  {isDone ? <CheckCircle className="w-[18px] h-[18px]" /> : <Icon className="w-[18px] h-[18px]" />}
-                </span>
                 <div className="flex-1 min-w-0">
-                  <p className={`text-sm truncate ${isActive ? 'font-semibold' : 'font-medium'}`}>
+                  <p className={`text-[13px] truncate ${isActive ? 'font-semibold' : 'font-medium'}`}>
                     {section.title}
                   </p>
-                  <p className={`text-xs mt-0.5 ${isDone ? 'text-sage-600' : 'text-stone-400'}`}>
-                    {prog.completed} of {prog.total} complete
-                  </p>
                 </div>
+                {isDone ? (
+                  <CheckCircle className={`w-4 h-4 shrink-0 ${isActive ? 'text-sage-300' : 'text-sage-500'}`} />
+                ) : prog.completed > 0 ? (
+                  <span className={`text-[11px] shrink-0 ${isActive ? 'text-stone-300' : 'text-stone-400'}`}>
+                    {prog.completed}/{prog.total}
+                  </span>
+                ) : null}
               </button>
             );
           })}
         </nav>
 
-        <div className="px-5 py-5 border-t border-stone-200">
-          <div className="flex justify-between text-xs text-stone-500 mb-2.5">
-            <span>Overall Progress</span>
-            <span className="font-medium text-stone-700">{globalProgress.completed} / {globalProgress.total}</span>
+        <div className="px-5 py-4 border-t border-stone-100">
+          <div className="flex justify-between text-xs text-stone-500 mb-2">
+            <span>Progress</span>
+            <span className="font-medium text-stone-700">{globalProgress.percent}%</span>
           </div>
-          <div className="w-full bg-stone-200 h-1.5 rounded-full overflow-hidden">
+          <div className="w-full bg-stone-100 h-1.5 rounded-full overflow-hidden">
             <div
-              className="h-full bg-sage-500 rounded-full transition-all duration-500"
+              className="h-full bg-stone-800 rounded-full transition-all duration-500"
               style={{ width: `${globalProgress.percent}%` }}
             />
           </div>
@@ -552,11 +556,13 @@ export default function App() {
       {/* Main */}
       <main className="flex-1 overflow-y-auto">
         {/* Top bar */}
-        <div className="sticky top-0 z-10 bg-white/95 backdrop-blur-sm border-b border-stone-200">
-          <div className="max-w-3xl mx-auto px-6 md:px-10 py-3.5 flex items-center justify-between">
-            <p className="text-sm text-stone-400">
-              Section {activeSection + 1} of {SECTIONS.length}
-            </p>
+        <div className="sticky top-0 z-10 bg-white border-b border-stone-200">
+          <div className="max-w-3xl mx-auto px-6 md:px-10 py-3 flex items-center justify-between">
+            <div className="flex items-center gap-2 text-sm text-stone-400">
+              <span>Operations Self-Assessment</span>
+              <ChevronRight className="w-3.5 h-3.5" />
+              <span className="text-stone-700 font-medium">Section {activeSection + 1} of {SECTIONS.length}</span>
+            </div>
             <div className="flex items-center gap-3">
               {lastSaved && (
                 <span className="text-xs text-stone-400 hidden sm:block">
@@ -566,7 +572,7 @@ export default function App() {
               <button
                 onClick={() => saveProgress()}
                 disabled={saving}
-                className="flex items-center gap-1.5 text-sm font-medium px-4 py-2 rounded-lg bg-white border border-stone-200 text-stone-600 hover:bg-stone-50 disabled:opacity-40 transition-colors"
+                className="flex items-center gap-1.5 text-sm font-medium px-4 py-2 rounded-lg bg-stone-800 text-white hover:bg-stone-900 disabled:opacity-40 transition-colors"
               >
                 {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                 Save
@@ -576,39 +582,39 @@ export default function App() {
         </div>
 
         {/* Content */}
-        <div className="max-w-3xl mx-auto px-6 md:px-10 py-10 md:py-14">
+        <div className="max-w-3xl mx-auto px-6 md:px-10 py-10 md:py-12">
           {/* Section header */}
           <div className="mb-10">
-            <h2 className="font-sans text-2xl md:text-3xl font-bold text-stone-900 leading-tight">
+            <h2 className="text-2xl font-bold text-stone-900 leading-tight">
               {currentSection.title}
             </h2>
-            <p className="text-base text-stone-500 mt-3 leading-relaxed">
+            <p className="text-sm text-stone-500 mt-2 leading-relaxed">
               {currentSection.description}
             </p>
-            <div className="flex items-center gap-3 mt-5">
-              <div className="w-20 bg-stone-200 h-1 rounded-full overflow-hidden">
+            <div className="flex items-center gap-3 mt-4">
+              <div className="flex-1 max-w-[120px] bg-stone-100 h-1 rounded-full overflow-hidden">
                 <div
-                  className={`h-full rounded-full transition-all duration-500 ${progress.percent === 100 ? 'bg-sage-500' : 'bg-sage-400'}`}
+                  className={`h-full rounded-full transition-all duration-500 ${progress.percent === 100 ? 'bg-sage-500' : 'bg-stone-800'}`}
                   style={{ width: `${progress.percent}%` }}
                 />
               </div>
-              <span className="text-sm text-stone-400">{progress.completed} of {progress.total} answered</span>
+              <span className="text-xs text-stone-400">{progress.completed} of {progress.total} answered</span>
             </div>
           </div>
 
           {/* Questions */}
-          <div className="space-y-10">
+          <div className="space-y-8">
             {currentSection.subsections.map((subsection) => (
-              <div key={subsection.id} className="space-y-5">
-                <h3 className="font-sans text-lg font-semibold text-stone-800">
+              <div key={subsection.id} className="space-y-4">
+                <h3 className="text-base font-semibold text-stone-800">
                   {subsection.title}
                 </h3>
 
-                <div className="space-y-4">
+                <div className="space-y-3">
                   {subsection.questions.map((q) => (
-                    <div key={q.id} className="bg-white rounded-xl border border-stone-200/80 overflow-hidden">
-                      <div className="px-6 pt-5 pb-5">
-                        <label className="block text-[15px] text-stone-700 leading-relaxed mb-3">
+                    <div key={q.id} className="bg-white rounded-lg border border-stone-200 overflow-hidden">
+                      <div className="px-5 pt-4 pb-4">
+                        <label className="block text-sm text-stone-600 leading-relaxed mb-2.5">
                           {q.label}
                         </label>
 
@@ -618,13 +624,13 @@ export default function App() {
                             onChange={(e) => updateResponse(q.id, e.target.value)}
                             rows={4}
                             placeholder="Type your response here..."
-                            className="w-full p-3.5 border border-stone-200 rounded-lg text-sm leading-relaxed focus:ring-2 focus:ring-sage-200 focus:border-sage-400 transition-all outline-none resize-none bg-stone-50/50 placeholder:text-stone-300"
+                            className="w-full p-3 border border-stone-200 rounded-lg text-sm leading-relaxed focus:ring-2 focus:ring-stone-200 focus:border-stone-400 transition-all outline-none resize-none bg-stone-50/50 placeholder:text-stone-300"
                           />
                         )}
 
                         {q.type === 'text' && (
                           <div className="relative">
-                            <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-stone-400">
+                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-stone-400">
                               <ArrowUpRight className="w-4 h-4" />
                             </div>
                             <input
@@ -632,7 +638,7 @@ export default function App() {
                               value={responses[q.id] || ''}
                               onChange={(e) => updateResponse(q.id, e.target.value)}
                               placeholder="Paste a link or type a brief reference..."
-                              className="w-full pl-10 pr-4 py-2.5 border border-stone-200 rounded-lg text-sm focus:ring-2 focus:ring-sage-200 focus:border-sage-400 transition-all outline-none bg-stone-50/50 placeholder:text-stone-300"
+                              className="w-full pl-9 pr-4 py-2.5 border border-stone-200 rounded-lg text-sm focus:ring-2 focus:ring-stone-200 focus:border-stone-400 transition-all outline-none bg-stone-50/50 placeholder:text-stone-300"
                             />
                           </div>
                         )}
@@ -656,7 +662,7 @@ export default function App() {
           </div>
 
           {/* Navigation */}
-          <div className="mt-12 flex items-center justify-between pb-14">
+          <div className="mt-10 flex items-center justify-between pb-12">
             <button
               onClick={() => {
                 setActiveSection(Math.max(0, activeSection - 1));
