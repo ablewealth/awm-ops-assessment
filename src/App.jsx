@@ -457,7 +457,10 @@ const QuestionField = ({ question, value, onChange, onBlur, questionNum }) => {
 export default function App() {
   const [user, setUser] = useState(null);
   const [activeSection, setActiveSection] = useState(0);
-  const [showIntro, setShowIntro] = useState(true);
+  const [showIntro, setShowIntro] = useState(() => {
+    if (typeof window === 'undefined') return true;
+    return window.localStorage.getItem('assessmentIntroDismissed') !== 'true';
+  });
   const [responses, setResponses] = useState({});
   const [saving, setSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState(null);
@@ -577,18 +580,47 @@ export default function App() {
             <img src={awmLogo} alt="Able Wealth Management" className="h-7 w-auto object-contain" />
             <div>
               <p className="text-2xs uppercase tracking-wide text-stone-500">Operations Assessment</p>
-              <h1 className="text-lg font-semibold text-stone-900">6-Month Self-Assessment</h1>
+              <h1 className="text-lg font-semibold text-stone-900">6-Month Self-Assessment Overview</h1>
             </div>
           </div>
 
           <div className="px-8 py-7">
             <p className="text-sm text-stone-700 leading-relaxed">
-              We want to use this 6-month self-assessment to align on what “Director of Operations” looks like at our firm and to make the next 90 days concrete and measurable. This is not about writing a narrative or listing tasks completed. It is about demonstrating that you are building and running an operating system: clear priorities, documented workflows, controls, dashboards, and decision thresholds that reduce errors and reduce routine Partner involvement. Please answer directly and link evidence wherever possible. If something is not yet built, say so and provide a specific plan with an owner, a date, and the first step you will complete within 7 days. We will review this together and use it to determine the right scope, title alignment, and compensation going forward.
+              This self-assessment is designed to clarify what the Director of Operations role means at our firm and to define the next 90 days in a concrete, measurable way.
             </p>
+
+            <p className="mt-4 text-sm text-stone-700 leading-relaxed">
+              The focus is not on writing a narrative or listing completed tasks. Instead, this review is about demonstrating progress toward building and running a true operating system — one with:
+            </p>
+
+            <ul className="mt-3 space-y-1.5 text-sm text-stone-700 leading-relaxed list-disc pl-5">
+              <li>Clear, documented priorities</li>
+              <li>Defined and repeatable workflows</li>
+              <li>Embedded controls and checkpoints</li>
+              <li>Visible dashboards and reporting</li>
+              <li>Clear decision thresholds</li>
+              <li>Reduced errors and reduced routine Partner involvement</li>
+            </ul>
+
+            <p className="mt-4 text-sm text-stone-700 leading-relaxed">
+              Please respond directly and concisely. Where possible, link to supporting documentation, dashboards, workflows, reports, or other evidence.
+            </p>
+
+            <p className="mt-4 text-sm text-stone-700 leading-relaxed">
+              If something is not yet built, state that clearly and outline:
+            </p>
+
+            <ul className="mt-3 space-y-1.5 text-sm text-stone-700 leading-relaxed list-disc pl-5">
+              <li>The specific plan to complete it</li>
+              <li>The responsible owner</li>
+              <li>The target completion date</li>
+              <li>The first action step you will complete within the next 7 days</li>
+            </ul>
 
             <div className="mt-7 flex justify-end">
               <button
                 onClick={() => {
+                  window.localStorage.setItem('assessmentIntroDismissed', 'true');
                   setShowIntro(false);
                   window.scrollTo(0, 0);
                 }}
@@ -666,6 +698,16 @@ export default function App() {
               <span className="text-stone-700">{currentSection.title}</span>
             </div>
             <div className="flex items-center gap-1.5">
+              <button
+                onClick={() => {
+                  window.localStorage.removeItem('assessmentIntroDismissed');
+                  setShowIntro(true);
+                  window.scrollTo(0, 0);
+                }}
+                className="text-2xs font-medium px-2.5 py-1.5 rounded border border-stone-200 text-stone-600 hover:bg-stone-50 transition-colors"
+              >
+                Overview
+              </button>
               {lastSaved && (
                 <span className="text-2xs text-stone-500 hidden sm:block mr-1">
                   Saved {lastSaved.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
