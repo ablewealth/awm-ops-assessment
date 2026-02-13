@@ -1,52 +1,55 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { initializeApp } from 'firebase/app';
-import { 
-  getFirestore, 
-  doc, 
-  setDoc, 
-  onSnapshot, 
-  collection 
+import {
+  getFirestore,
+  doc,
+  setDoc,
+  onSnapshot,
+  collection
 } from 'firebase/firestore';
-import { 
-  getAuth, 
-  signInAnonymously, 
-  signInWithCustomToken, 
-  onAuthStateChanged 
+import {
+  getAuth,
+  signInAnonymously,
+  signInWithCustomToken,
+  onAuthStateChanged
 } from 'firebase/auth';
-import { 
-  Save, 
-  CheckCircle, 
-  ChevronRight, 
-  ChevronLeft, 
-  FileText, 
-  BarChart, 
-  ShieldCheck, 
-  Clock, 
-  Zap, 
-  UserCheck, 
+import {
+  Save,
+  CheckCircle,
+  ChevronRight,
+  ChevronLeft,
+  FileText,
+  BarChart,
+  ShieldCheck,
+  Clock,
+  Zap,
+  UserCheck,
   Target,
   AlertCircle,
   Link as LinkIcon,
   Loader2
 } from 'lucide-react';
 
-// --- Firebase Configuration ---
-// When running locally, replace the logic below with your actual Firebase config object from the Firebase Console.
-const firebaseConfig = typeof __firebase_config !== 'undefined' 
-  ? JSON.parse(__firebase_config) 
+/**
+ * --- FIREBASE CONFIGURATION ---
+ * This block handles both the internal preview environment and your external local project.
+ */
+const firebaseConfig = typeof __firebase_config !== 'undefined'
+  ? JSON.parse(__firebase_config)
   : {
-      apiKey: "",
-      authDomain: "your-app.firebaseapp.com",
-      projectId: "your-app",
-      storageBucket: "your-app.appspot.com",
-      messagingSenderId: "your-id",
+      apiKey: "YOUR_API_KEY", // Replace with your key for local/GitHub use
+      authDomain: "your-project.firebaseapp.com",
+      projectId: "your-project-id",
+      storageBucket: "your-project.appspot.com",
+      messagingSenderId: "your-sender-id",
       appId: "your-app-id"
     };
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
-const appId = typeof __app_id !== 'undefined' ? __app_id : 'able-wealth-ops-assessment';
+
+const appId = typeof __app_id !== 'undefined' ? __app_id : 'able-wealth-ops-assessment-v1';
 
 // --- Assessment Schema ---
 const SECTIONS = [
@@ -163,10 +166,10 @@ const RatingInput = ({ value, onChange }) => {
         <button
           key={num}
           onClick={() => onChange(num)}
-          className={`w-12 h-12 rounded-lg font-bold text-lg transition-all border-2 
-            ${value === num 
-              ? 'bg-blue-600 border-blue-600 text-white shadow-lg scale-110' 
-              : 'bg-white border-slate-200 text-slate-400 hover:border-blue-300 hover:text-blue-500'}`}
+          className={`w-12 h-12 rounded-lg font-bold text-lg transition-all border-2
+            ${value === num
+              ? 'bg-blue-600 border-blue-600 text-white shadow-lg scale-110'
+              : 'bg-white border-slate-200 text-slate-400 hover:border-blue-300 hover:text-blue-50'}`}
         >
           {num}
         </button>
@@ -183,7 +186,7 @@ export default function App() {
   const [lastSaved, setLastSaved] = useState(null);
   const [isLoaded, setIsLoaded] = useState(false);
 
-  // Authentication Setup
+  // 1. Authentication Lifecycle
   useEffect(() => {
     const initAuth = async () => {
       try {
@@ -193,29 +196,37 @@ export default function App() {
           await signInAnonymously(auth);
         }
       } catch (err) {
-        console.error("Auth error:", err);
+        console.error("Authentication Error:", err);
+        setIsLoaded(true); // Don't hang if auth fails
       }
     };
+
     initAuth();
+
     const unsubscribe = onAuthStateChanged(auth, setUser);
     return () => unsubscribe();
   }, []);
 
-  // Sync with Firestore
+  // 2. Data Fetching Lifecycle
   useEffect(() => {
     if (!user) return;
 
-    const docRef = doc(db, 'artifacts', appId, 'users', user.uid, 'assessment', 'submission');
-    const unsubscribe = onSnapshot(docRef, (docSnap) => {
-      if (docSnap.exists()) {
-        setResponses(docSnap.data().responses || {});
-        setLastSaved(docSnap.data().updatedAt?.toDate() || null);
+    // RULE 1 Path structure: /artifacts/{appId}/users/{userId}/{collectionName}
+    const docRef = doc(db, 'artifacts', appId, 'users', user.uid, 'submissions', 'main');
+
+    const unsubscribe = onSnapshot(docRef,
+      (docSnap) => {
+        if (docSnap.exists()) {
+          setResponses(docSnap.data().responses || {});
+          setLastSaved(docSnap.data().updatedAt?.toDate() || null);
+        }
+        setIsLoaded(true);
+      },
+      (error) => {
+        console.error("Firestore Listen Error:", error);
+        setIsLoaded(true);
       }
-      setIsLoaded(true);
-    }, (error) => {
-      console.error("Firestore error:", error);
-      setIsLoaded(true);
-    });
+    );
 
     return () => unsubscribe();
   }, [user]);
@@ -224,7 +235,7 @@ export default function App() {
     if (!user) return;
     setSaving(true);
     try {
-      const docRef = doc(db, 'artifacts', appId, 'users', user.uid, 'assessment', 'submission');
+      const docRef = doc(db, 'artifacts', appId, 'users', user.uid, 'submissions', 'main');
       await setDoc(docRef, {
         responses: newResponses,
         updatedAt: new Date(),
@@ -262,7 +273,7 @@ export default function App() {
     return (
       <div className="h-screen w-full flex flex-col items-center justify-center bg-slate-50 text-slate-600">
         <Loader2 className="w-12 h-12 animate-spin mb-4 text-blue-600" />
-        <p className="text-lg font-medium">Initializing Assessment Environment...</p>
+        <p className="text-lg font-medium">Loading Assessment Environment...</p>
       </div>
     );
   }
@@ -283,8 +294,8 @@ export default function App() {
               key={section.id}
               onClick={() => setActiveSection(idx)}
               className={`w-full flex items-start p-3 rounded-xl transition-all text-left group
-                ${activeSection === idx 
-                  ? 'bg-blue-50 text-blue-700 ring-1 ring-blue-200 shadow-sm' 
+                ${activeSection === idx
+                  ? 'bg-blue-50 text-blue-700 ring-1 ring-blue-200 shadow-sm'
                   : 'hover:bg-slate-50 text-slate-600'}`}
             >
               <div className={`mt-0.5 p-2 rounded-lg mr-3 ${activeSection === idx ? 'bg-blue-600 text-white' : 'bg-slate-100 group-hover:bg-slate-200'}`}>
@@ -295,7 +306,7 @@ export default function App() {
                   {section.title}
                 </p>
                 <div className="mt-2 w-full bg-slate-200 h-1.5 rounded-full overflow-hidden">
-                  <div 
+                  <div
                     className={`h-full transition-all duration-500 ${sectionProgress[idx].percent === 100 ? 'bg-green-500' : 'bg-blue-500'}`}
                     style={{ width: `${sectionProgress[idx].percent}%` }}
                   />
@@ -311,7 +322,7 @@ export default function App() {
             <span>{globalProgress}%</span>
           </div>
           <div className="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
-            <div 
+            <div
               className="h-full bg-blue-600 transition-all duration-700"
               style={{ width: `${globalProgress}%` }}
             />
@@ -353,7 +364,7 @@ export default function App() {
                 <label className="block text-base font-bold text-slate-800 leading-snug">
                   {q.label}
                 </label>
-                
+
                 {q.type === 'textarea' && (
                   <textarea
                     value={responses[q.id] || ''}
@@ -380,9 +391,9 @@ export default function App() {
                 )}
 
                 {q.type === 'rating' && (
-                  <RatingInput 
-                    value={responses[q.id]} 
-                    onChange={(val) => updateResponse(q.id, val)} 
+                  <RatingInput
+                    value={responses[q.id]}
+                    onChange={(val) => updateResponse(q.id, val)}
                   />
                 )}
               </div>
