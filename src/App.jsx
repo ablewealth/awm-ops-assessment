@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { initializeApp } from 'firebase/app';
 import {
   getFirestore,
@@ -18,9 +18,11 @@ import {
   ChevronRight,
   ChevronLeft,
   Loader2,
-  ArrowUpRight
+  Link2
 } from 'lucide-react';
 import awmLogo from '/awm-logo.png';
+
+// --- Firebase setup ---
 
 const firebaseConfig = typeof __firebase_config !== 'undefined'
   ? JSON.parse(__firebase_config)
@@ -39,14 +41,15 @@ const db = getFirestore(app);
 
 const appId = typeof __app_id !== 'undefined' ? __app_id : 'able-wealth-ops-assessment-v1';
 
+// --- Data ---
+
 const RATING_LABELS = ['Developing', 'Building', 'Competent', 'Strong', 'Mastery'];
 
 const SECTIONS = [
   {
     id: 'section-1',
     title: 'System Architecture & SOP Rigor',
-    icon: 'FileText',
-    description: 'Designing an operational factory that is accurate, scalable, and low-friction',
+    description: 'Designing an operational factory that is accurate, scalable, and low-friction.',
     subsections: [
       {
         id: 'sop-integrity',
@@ -98,7 +101,6 @@ const SECTIONS = [
   {
     id: 'section-2',
     title: 'Time Governance & Prioritization',
-    icon: 'Clock',
     description: "Managing your time and the firm's capacity through systems, not memory.",
     subsections: [
       {
@@ -132,8 +134,7 @@ const SECTIONS = [
   },
   {
     id: 'section-3',
-    title: 'Compliance Oversight, Staff Development, & Execution',
-    icon: 'ShieldCheck',
+    title: 'Compliance, Staff Dev & Execution',
     description: 'Ensuring people, processes, and policies are aligned and consistently executed.',
     subsections: [
       {
@@ -190,7 +191,6 @@ const SECTIONS = [
   {
     id: 'section-4',
     title: 'Risk & Financial Stewardship',
-    icon: 'BarChart3',
     description: "Protecting the firm's economics and fiduciary posture.",
     subsections: [
       {
@@ -213,8 +213,7 @@ const SECTIONS = [
   },
   {
     id: 'section-5',
-    title: 'Time Leaks, Automation, and Future Focus',
-    icon: 'Zap',
+    title: 'Time Leaks, Automation & Future Focus',
     description: 'Reclaiming your time for high-leverage work.',
     subsections: [
       {
@@ -246,8 +245,7 @@ const SECTIONS = [
   {
     id: 'section-6',
     title: 'Director-Level Leadership & Autonomy',
-    icon: 'Users',
-    description: 'Demonstrating ownership, initiative, and director-level decision-making. Framing: Associates ask "What should I do?" Directors say "Here is what I\'ve done."',
+    description: 'Demonstrating ownership, initiative, and director-level decision-making.',
     subsections: [
       {
         id: 'proactive-resolution',
@@ -291,14 +289,13 @@ const SECTIONS = [
   {
     id: 'section-7',
     title: 'Problem Solving Rating',
-    icon: 'Lightbulb',
     description: 'Evaluating your ability to diagnose issues, weigh options, and implement durable solutions.',
     subsections: [
       {
         id: 'problem-solving-rating',
         title: 'Self-Rating: Problem Solving (1–5)',
         questions: [
-          { id: 'ps_rating', label: 'On a scale of 1–5 (1 = needs significant improvement, 5 = outstanding), how would you rate your problem-solving over the last 6 months? Score:', type: 'rating' },
+          { id: 'ps_rating', label: 'On a scale of 1–5 (1 = needs significant improvement, 5 = outstanding), how would you rate your problem-solving over the last 6 months?', type: 'rating' },
         ]
       },
       {
@@ -321,14 +318,13 @@ const SECTIONS = [
   {
     id: 'section-8',
     title: 'Strategic Clarity Rating',
-    icon: 'Target',
     description: "Connecting daily operations to the firm's long-term strategy and priorities.",
     subsections: [
       {
         id: 'strategic-rating',
         title: 'Self-Rating: Strategic Clarity (1–5)',
         questions: [
-          { id: 'sc_rating', label: "On a scale of 1–5, how clearly do you understand and operate in alignment with the firm's strategic goals? Score:", type: 'rating' },
+          { id: 'sc_rating', label: "On a scale of 1–5, how clearly do you understand and operate in alignment with the firm's strategic goals?", type: 'rating' },
         ]
       },
       {
@@ -350,33 +346,87 @@ const SECTIONS = [
   }
 ];
 
-const RatingInput = ({ value, onChange }) => {
+// --- Components ---
+
+const RatingInput = ({ value, onChange }) => (
+  <div className="mt-1">
+    <div className="flex gap-1.5">
+      {[1, 2, 3, 4, 5].map((num) => (
+        <button
+          key={num}
+          onClick={() => onChange(num)}
+          className={`flex-1 py-2 rounded text-xs font-medium transition-all border
+            ${value === num
+              ? 'bg-stone-800 border-stone-800 text-white'
+              : 'bg-white border-stone-200 text-stone-400 hover:border-stone-300 hover:text-stone-600'}`}
+        >
+          {num}
+        </button>
+      ))}
+    </div>
+    <div className="flex justify-between mt-1.5 px-0.5">
+      {RATING_LABELS.map((label, i) => (
+        <span key={label} className={`text-2xs ${value === i + 1 ? 'text-stone-700 font-medium' : 'text-stone-400'}`}>
+          {label}
+        </span>
+      ))}
+    </div>
+  </div>
+);
+
+const QuestionField = ({ question, value, onChange, onBlur, questionNum }) => {
+  const isFilled = !!value;
+
   return (
-    <div className="mt-2">
-      <div className="flex gap-2">
-        {[1, 2, 3, 4, 5].map((num) => (
-          <button
-            key={num}
-            onClick={() => onChange(num)}
-            className={`flex-1 py-3 rounded-lg text-sm font-medium transition-all border
-              ${value === num
-                ? 'bg-stone-800 border-stone-800 text-white'
-                : 'bg-white border-stone-200 text-stone-400 hover:border-stone-400 hover:text-stone-600'}`}
-          >
-            {num}
-          </button>
-        ))}
+    <div className="question-row px-5 py-3.5 border-b border-stone-100">
+      {/* Label row */}
+      <div className="flex items-start gap-2 mb-1.5">
+        <span className={`text-2xs font-medium mt-px shrink-0 ${isFilled ? 'text-sage-600' : 'text-stone-400'}`}>
+          {questionNum}.
+        </span>
+        <label className="block text-xs text-stone-600 leading-relaxed">
+          {question.label}
+        </label>
       </div>
-      <div className="flex justify-between mt-2.5 px-1">
-        {RATING_LABELS.map((label, i) => (
-          <span key={label} className={`text-xs ${value === i + 1 ? 'text-stone-800 font-medium' : 'text-stone-400'}`}>
-            {label}
-          </span>
-        ))}
+
+      {/* Input */}
+      <div className="pl-5">
+        {question.type === 'textarea' && (
+          <textarea
+            value={value || ''}
+            onChange={(e) => onChange(question.id, e.target.value)}
+            onBlur={onBlur}
+            rows={3}
+            placeholder="Type your response..."
+            className="w-full px-2.5 py-2 border border-stone-200 rounded text-xs leading-relaxed focus:border-stone-400 transition-all outline-none placeholder:text-stone-300"
+          />
+        )}
+
+        {question.type === 'text' && (
+          <div className="relative">
+            <div className="absolute inset-y-0 left-0 pl-2.5 flex items-center pointer-events-none text-stone-400">
+              <Link2 className="w-3 h-3" />
+            </div>
+            <input
+              type="text"
+              value={value || ''}
+              onChange={(e) => onChange(question.id, e.target.value)}
+              onBlur={onBlur}
+              placeholder="Paste link or reference..."
+              className="w-full pl-7 pr-3 py-2 border border-stone-200 rounded text-xs focus:border-stone-400 transition-all outline-none placeholder:text-stone-300"
+            />
+          </div>
+        )}
+
+        {question.type === 'rating' && (
+          <RatingInput value={value} onChange={(val) => { onChange(question.id, val); onBlur(); }} />
+        )}
       </div>
     </div>
   );
 };
+
+// --- App ---
 
 export default function App() {
   const [user, setUser] = useState(null);
@@ -386,6 +436,7 @@ export default function App() {
   const [lastSaved, setLastSaved] = useState(null);
   const [isLoaded, setIsLoaded] = useState(false);
 
+  // Auth
   useEffect(() => {
     const initAuth = async () => {
       try {
@@ -399,18 +450,15 @@ export default function App() {
         setIsLoaded(true);
       }
     };
-
     initAuth();
-
     const unsubscribe = onAuthStateChanged(auth, setUser);
     return () => unsubscribe();
   }, []);
 
+  // Firestore sync
   useEffect(() => {
     if (!user) return;
-
     const docRef = doc(db, 'artifacts', appId, 'users', user.uid, 'submissions', 'main');
-
     const unsubscribe = onSnapshot(docRef,
       (docSnap) => {
         if (docSnap.exists()) {
@@ -424,17 +472,18 @@ export default function App() {
         setIsLoaded(true);
       }
     );
-
     return () => unsubscribe();
   }, [user]);
 
-  const saveProgress = async (newResponses = responses) => {
+  // Save
+  const saveProgress = useCallback(async (newResponses) => {
+    const data = newResponses || responses;
     if (!user) return;
     setSaving(true);
     try {
       const docRef = doc(db, 'artifacts', appId, 'users', user.uid, 'submissions', 'main');
       await setDoc(docRef, {
-        responses: newResponses,
+        responses: data,
         updatedAt: new Date(),
         userId: user.uid,
         status: 'in-progress'
@@ -445,21 +494,31 @@ export default function App() {
     } finally {
       setSaving(false);
     }
-  };
+  }, [user, responses]);
 
   const updateResponse = (id, value) => {
-    const updated = { ...responses, [id]: value };
-    setResponses(updated);
+    setResponses(prev => ({ ...prev, [id]: value }));
   };
 
+  const handleBlur = () => {
+    saveProgress();
+  };
+
+  // Progress calculations
   const sectionProgress = useMemo(() => {
     return SECTIONS.map(section => {
       const total = section.subsections.reduce((acc, sub) => acc + sub.questions.length, 0);
       const completed = section.subsections.reduce((acc, sub) => {
         return acc + sub.questions.filter(q => !!responses[q.id]).length;
       }, 0);
-      return { total, completed, percent: Math.round((completed / total) * 100) };
+      return { total, completed, percent: total > 0 ? Math.round((completed / total) * 100) : 0 };
     });
+  }, [responses]);
+
+  const subsectionProgress = useCallback((subsection) => {
+    const total = subsection.questions.length;
+    const completed = subsection.questions.filter(q => !!responses[q.id]).length;
+    return { total, completed };
   }, [responses]);
 
   const globalProgress = useMemo(() => {
@@ -467,14 +526,15 @@ export default function App() {
       return acc + s.subsections.reduce((subAcc, sub) => subAcc + sub.questions.length, 0);
     }, 0);
     const completed = Object.values(responses).filter(v => !!v).length;
-    return { total, completed, percent: Math.round((completed / total) * 100) };
+    return { total, completed, percent: total > 0 ? Math.round((completed / total) * 100) : 0 };
   }, [responses]);
 
+  // Loading state
   if (!isLoaded) {
     return (
-      <div className="h-screen w-full flex flex-col items-center justify-center bg-stone-50">
-        <Loader2 className="w-7 h-7 animate-spin mb-4 text-stone-400" />
-        <p className="text-sm text-stone-500">Loading your assessment...</p>
+      <div className="h-screen w-full flex flex-col items-center justify-center bg-white">
+        <Loader2 className="w-5 h-5 animate-spin mb-3 text-stone-400" />
+        <p className="text-xs text-stone-400">Loading assessment...</p>
       </div>
     );
   }
@@ -482,17 +542,22 @@ export default function App() {
   const currentSection = SECTIONS[activeSection];
   const progress = sectionProgress[activeSection];
 
+  // Running question counter across subsections
+  let questionCounter = 0;
+
   return (
     <div className="min-h-screen bg-white font-sans text-stone-900 flex flex-col md:flex-row">
-      {/* Sidebar */}
+
+      {/* ── Sidebar ── */}
       <aside className="w-full md:w-52 lg:w-56 bg-white border-r border-stone-200 flex flex-col h-auto md:h-screen md:sticky md:top-0 shrink-0">
+
         {/* Logo */}
         <div className="h-12 flex items-center px-4 border-b border-stone-200 shrink-0">
           <img src={awmLogo} alt="Able Wealth Management" className="h-6 w-auto object-contain" />
         </div>
 
-        {/* Nav */}
-        <nav className="flex-1 overflow-y-auto py-4">
+        {/* Navigation */}
+        <nav className="flex-1 overflow-y-auto py-3">
           {SECTIONS.map((section, idx) => {
             const isActive = activeSection === idx;
             const prog = sectionProgress[idx];
@@ -501,23 +566,24 @@ export default function App() {
               <button
                 key={section.id}
                 onClick={() => { setActiveSection(idx); window.scrollTo(0, 0); }}
-                className={`nav-item w-full text-left block px-5 py-[7px] text-[13px] transition-colors
+                className={`nav-item w-full text-left block px-5 py-[7px] text-[13px]
                   ${isActive
                     ? 'nav-item-active text-stone-900 font-semibold'
                     : 'text-stone-500 hover:text-stone-900 hover:bg-stone-50'
                   }`}
               >
+                <span className="text-2xs text-stone-400 mr-1.5">{idx + 1}.</span>
                 {section.title}
-                {isDone && <CheckCircle className="inline-block w-3 h-3 text-sage-500 ml-1.5 -mt-0.5" />}
+                {isDone && <CheckCircle className="inline-block w-3 h-3 text-sage-500 ml-1 -mt-0.5" />}
               </button>
             );
           })}
         </nav>
 
-        {/* Progress */}
+        {/* Progress bar */}
         <div className="px-4 py-3 border-t border-stone-200 shrink-0">
-          <div className="flex justify-between text-[11px] text-stone-400 mb-1">
-            <span>Progress</span>
+          <div className="flex justify-between text-2xs text-stone-400 mb-1">
+            <span>{globalProgress.completed} of {globalProgress.total}</span>
             <span className="font-medium text-stone-600">{globalProgress.percent}%</span>
           </div>
           <div className="w-full bg-stone-100 h-1 rounded-full overflow-hidden">
@@ -526,153 +592,113 @@ export default function App() {
         </div>
       </aside>
 
-      {/* Main */}
+      {/* ── Main ── */}
       <main className="flex-1 flex flex-col min-h-screen">
-        {/* Header bar */}
+
+        {/* Header */}
         <div className="sticky top-0 z-10 bg-white border-b border-stone-200 shrink-0">
-          {/* Top row: breadcrumb + actions */}
-          <div className="px-8 py-2.5 flex items-center justify-between">
-            <div className="flex items-center gap-1.5 text-xs text-stone-400">
+          <div className="px-8 py-2 flex items-center justify-between">
+            <div className="flex items-center gap-1.5 text-2xs text-stone-400">
               <span>Assessment</span>
               <ChevronRight className="w-3 h-3" />
-              <span>{currentSection.title}</span>
+              <span className="text-stone-600">{currentSection.title}</span>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5">
               {lastSaved && (
-                <span className="text-[11px] text-stone-400 hidden sm:block">
-                  Saved {lastSaved.toLocaleTimeString()}
+                <span className="text-2xs text-stone-400 hidden sm:block mr-1">
+                  Saved {lastSaved.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                 </span>
               )}
               <button
-                onClick={() => {
-                  if (activeSection > 0) {
-                    setActiveSection(activeSection - 1);
-                    window.scrollTo(0, 0);
-                  }
-                }}
+                onClick={() => { if (activeSection > 0) { setActiveSection(activeSection - 1); window.scrollTo(0, 0); } }}
                 disabled={activeSection === 0}
-                className="flex items-center gap-1 text-xs font-medium px-3 py-1.5 rounded-md border border-stone-200 text-stone-600 hover:bg-stone-50 disabled:opacity-30 transition-colors"
+                className="flex items-center gap-0.5 text-2xs font-medium px-2.5 py-1.5 rounded border border-stone-200 text-stone-500 hover:bg-stone-50 disabled:opacity-25 transition-colors"
               >
-                <ChevronLeft className="w-3 h-3" />
-                Prev
+                <ChevronLeft className="w-3 h-3" /> Prev
               </button>
               <button
-                onClick={() => {
-                  saveProgress();
-                  if (activeSection < SECTIONS.length - 1) {
-                    setActiveSection(activeSection + 1);
-                    window.scrollTo(0, 0);
-                  }
-                }}
+                onClick={() => { saveProgress(); if (activeSection < SECTIONS.length - 1) { setActiveSection(activeSection + 1); window.scrollTo(0, 0); } }}
                 disabled={activeSection === SECTIONS.length - 1}
-                className="flex items-center gap-1 text-xs font-medium px-3 py-1.5 rounded-md border border-stone-200 text-stone-600 hover:bg-stone-50 disabled:opacity-30 transition-colors"
+                className="flex items-center gap-0.5 text-2xs font-medium px-2.5 py-1.5 rounded border border-stone-200 text-stone-500 hover:bg-stone-50 disabled:opacity-25 transition-colors"
               >
-                Next
-                <ChevronRight className="w-3 h-3" />
+                Next <ChevronRight className="w-3 h-3" />
               </button>
               <button
                 onClick={() => saveProgress()}
                 disabled={saving}
-                className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-md bg-stone-900 text-white hover:bg-stone-800 disabled:opacity-40 transition-colors"
+                className="flex items-center gap-1 text-2xs font-medium px-2.5 py-1.5 rounded bg-stone-900 text-white hover:bg-stone-800 disabled:opacity-40 transition-colors"
               >
                 {saving ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />}
                 Save
               </button>
             </div>
           </div>
-          {/* Title row */}
-          <div className="px-8 pb-3 flex items-center justify-between">
-            <h1 className="text-lg font-semibold text-stone-900">{currentSection.title}</h1>
-            <span className="text-xs text-stone-400">{progress.completed} of {progress.total} answered</span>
+          <div className="px-8 pb-2.5 flex items-baseline justify-between">
+            <h1 className="text-base font-semibold text-stone-900">{currentSection.title}</h1>
+            <span className="text-2xs text-stone-400">{progress.completed}/{progress.total} answered</span>
           </div>
         </div>
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto bg-stone-50">
-          <div className="max-w-4xl px-8 py-6">
-            <p className="text-sm text-stone-500 mb-6">{currentSection.description}</p>
+          <div className="max-w-4xl px-8 py-5">
+            <p className="text-xs text-stone-500 mb-5 leading-relaxed">{currentSection.description}</p>
 
-            {/* Subsections */}
-            <div className="space-y-5">
-              {currentSection.subsections.map((subsection) => (
-                <div key={subsection.id} className="bg-white rounded-lg border border-stone-200">
-                  {/* Subsection header */}
-                  <div className="px-6 py-3 border-b border-stone-100">
-                    <h3 className="text-sm font-semibold text-stone-800">
-                      {subsection.title}
-                      <span className="text-stone-400 font-normal ml-2">({subsection.questions.length})</span>
-                    </h3>
+            {/* Subsection cards */}
+            <div className="space-y-4">
+              {currentSection.subsections.map((subsection) => {
+                const subProg = subsectionProgress(subsection);
+                return (
+                  <div key={subsection.id} className="bg-white rounded-lg border border-stone-200 overflow-hidden">
+
+                    {/* Subsection header */}
+                    <div className="px-5 py-2.5 border-b border-stone-100 flex items-center justify-between">
+                      <h3 className="text-xs font-semibold text-stone-800">
+                        {subsection.title}
+                        <span className="text-stone-400 font-normal ml-1.5">({subsection.questions.length})</span>
+                      </h3>
+                      {subProg.completed > 0 && (
+                        <span className={`text-2xs font-medium ${subProg.completed === subProg.total ? 'text-sage-600' : 'text-stone-400'}`}>
+                          {subProg.completed === subProg.total ? 'Complete' : `${subProg.completed}/${subProg.total}`}
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Questions */}
+                    {subsection.questions.map((q) => {
+                      questionCounter++;
+                      return (
+                        <QuestionField
+                          key={q.id}
+                          question={q}
+                          value={responses[q.id]}
+                          onChange={updateResponse}
+                          onBlur={handleBlur}
+                          questionNum={questionCounter}
+                        />
+                      );
+                    })}
                   </div>
-
-                  {/* Questions */}
-                  <div className="divide-y divide-stone-100">
-                    {subsection.questions.map((q) => (
-                      <div key={q.id} className="px-6 py-4">
-                        <label className="block text-sm text-stone-700 leading-relaxed mb-2">
-                          {q.label}
-                        </label>
-
-                        {q.type === 'textarea' && (
-                          <textarea
-                            value={responses[q.id] || ''}
-                            onChange={(e) => updateResponse(q.id, e.target.value)}
-                            rows={3}
-                            placeholder="Type your response here..."
-                            className="w-full p-3 border border-stone-200 rounded-md text-sm leading-relaxed focus:ring-1 focus:ring-stone-300 focus:border-stone-400 transition-all outline-none resize-none placeholder:text-stone-300"
-                          />
-                        )}
-
-                        {q.type === 'text' && (
-                          <div className="relative">
-                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-stone-400">
-                              <ArrowUpRight className="w-3.5 h-3.5" />
-                            </div>
-                            <input
-                              type="text"
-                              value={responses[q.id] || ''}
-                              onChange={(e) => updateResponse(q.id, e.target.value)}
-                              placeholder="Paste a link or type a brief reference..."
-                              className="w-full pl-9 pr-4 py-2.5 border border-stone-200 rounded-md text-sm focus:ring-1 focus:ring-stone-300 focus:border-stone-400 transition-all outline-none placeholder:text-stone-300"
-                            />
-                          </div>
-                        )}
-
-                        {q.type === 'rating' && (
-                          <RatingInput
-                            value={responses[q.id]}
-                            onChange={(val) => updateResponse(q.id, val)}
-                          />
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
 
-            {/* Bottom navigation */}
-            <div className="mt-8 flex items-center justify-end gap-2 pb-8">
+            {/* Bottom action */}
+            <div className="mt-6 flex items-center justify-end pb-6">
               {activeSection < SECTIONS.length - 1 ? (
                 <button
-                  onClick={() => {
-                    saveProgress();
-                    setActiveSection(activeSection + 1);
-                    window.scrollTo(0, 0);
-                  }}
-                  className="flex items-center gap-1.5 px-4 py-2 rounded-md text-sm font-medium bg-stone-900 text-white hover:bg-stone-800 transition-colors"
+                  onClick={() => { saveProgress(); setActiveSection(activeSection + 1); window.scrollTo(0, 0); }}
+                  className="flex items-center gap-1.5 px-4 py-2 rounded text-xs font-medium bg-stone-900 text-white hover:bg-stone-800 transition-colors"
                 >
                   Continue to Next Section
-                  <ChevronRight className="w-4 h-4" />
+                  <ChevronRight className="w-3.5 h-3.5" />
                 </button>
               ) : (
                 <button
-                  onClick={() => {
-                    saveProgress();
-                    alert("Assessment progress saved successfully for final review.");
-                  }}
-                  className="flex items-center gap-1.5 px-4 py-2 rounded-md text-sm font-medium bg-sage-600 text-white hover:bg-sage-700 transition-colors"
+                  onClick={() => { saveProgress(); alert("Assessment saved for final review."); }}
+                  className="flex items-center gap-1.5 px-4 py-2 rounded text-xs font-medium bg-sage-600 text-white hover:bg-sage-700 transition-colors"
                 >
-                  <CheckCircle className="w-4 h-4" />
+                  <CheckCircle className="w-3.5 h-3.5" />
                   Submit for Review
                 </button>
               )}

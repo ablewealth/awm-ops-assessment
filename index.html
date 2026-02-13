@@ -7,13 +7,16 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <script>
       tailwind.config = {
         theme: {
           extend: {
             fontFamily: {
               sans: ['Inter', 'system-ui', 'sans-serif'],
+            },
+            fontSize: {
+              '2xs': ['0.6875rem', { lineHeight: '1rem' }],
             },
             colors: {
               sage: {
@@ -35,8 +38,11 @@
     </script>
     <style>
       * { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
-      .nav-item { border-left: 3px solid transparent; }
-      .nav-item-active { border-left: 3px solid #1c1917; background: #fafaf9; }
+      .nav-item { border-left: 3px solid transparent; transition: all 0.15s ease; }
+      .nav-item-active { border-left-color: #1c1917; background: #fafaf9; }
+      textarea { resize: vertical; min-height: 60px; }
+      textarea:focus, input[type="text"]:focus { box-shadow: 0 0 0 2px rgba(168,162,158,0.15); }
+      .question-row:last-child { border-bottom: none; }
     </style>
   </head>
   <body class="bg-stone-50">
