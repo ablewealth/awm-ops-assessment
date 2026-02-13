@@ -54,6 +54,8 @@ const SECTIONS = [
       {
         id: 'sop-integrity',
         title: 'SOP Integrity & Repeatability',
+        definition: 'A new hire can complete a core operational task correctly using only your written SOP — no Slack messages, verbal walkthroughs, or tribal knowledge required.',
+        evidence: 'Link to 3 SOPs. Each must include: step-by-step instructions, required system fields or inputs, expected outputs, and an embedded QC checkpoint.',
         questions: [
           { id: 'sop_integrity', label: 'Do your current SOPs enable a new hire to complete core tasks correctly using only your documentation (no verbal support)?', type: 'textarea' },
           { id: 'critical_workflows', label: 'Identify 3–5 critical workflows (e.g., client onboarding, money movement, billing exceptions) where SOPs are currently "audit-ready."', type: 'textarea' },
@@ -63,6 +65,8 @@ const SECTIONS = [
       {
         id: 'vendor-integration',
         title: 'New Vendor Integration',
+        definition: 'Every vendor added in the last 6 months has a complete internal page that includes: login/access instructions, firm-specific use case, troubleshooting steps, and an identified internal owner.',
+        evidence: 'Link to vendor internal pages for the last 3 tools/vendors onboarded. Each page must contain all four elements listed above.',
         questions: [
           { id: 'vendor_integration', label: 'For each vendor added in the last 6 months, have you created: access/login documentation, troubleshooting steps, and defined firm-use cases?', type: 'textarea' },
           { id: 'recent_vendors', label: 'List the last 3 vendors or major tools integrated and link to their internal SOPs or configuration notes.', type: 'textarea' },
@@ -71,6 +75,8 @@ const SECTIONS = [
       {
         id: 'root-cause',
         title: 'Root-Cause System Design',
+        definition: 'When an error occurs, you can identify the system condition that allowed it — not just the person who made it — and implement a process-level or system-level fix.',
+        evidence: 'Provide 3 examples from the last 90 days using a 5-part structure: (1) Error description, (2) Immediate fix, (3) Root cause identified, (4) Permanent system change implemented, (5) How you verified the fix is holding.',
         questions: [
           { id: 'root_cause_process', label: 'When an error occurs (e.g., NIGO, billing exception), what is your standard process for identifying root cause and implementing a system-level fix?', type: 'textarea' },
           { id: 'permanent_fixes', label: 'In the last 90 days, list at least 3 issues where you implemented a permanent process change (not just a one-time fix) and describe the change.', type: 'textarea' },
@@ -79,6 +85,8 @@ const SECTIONS = [
       {
         id: 'process-simplification',
         title: 'Process Simplification & Technical Debt',
+        definition: 'You have removed steps, handoffs, or manual checks from a workflow while maintaining control quality — making it faster without making it riskier.',
+        evidence: 'Provide before/after summaries for 2 workflows simplified in the last 90 days. Include: steps removed, time saved per cycle, and confirmation that output quality was maintained.',
         questions: [
           { id: 'process_debt_id', label: 'How do you identify "process debt" (legacy steps, duplicate checks, unnecessary handoffs)?', type: 'textarea' },
           { id: 'process_simplification_count', label: 'In the last 90 days, how many steps have you removed, consolidated, or automated in core workflows?', type: 'textarea' },
@@ -88,6 +96,8 @@ const SECTIONS = [
       {
         id: 'operational-architecture',
         title: 'Operational Architecture',
+        definition: 'You have built or redesigned a system so it runs consistently — with defined owners, inputs, outputs, and quality checks — rather than depending on memory or ad hoc effort.',
+        evidence: 'Provide a process map or narrative for 1 system you built or materially improved. Must include: trigger event, step sequence, responsible party, QC checkpoint, and where the output is stored/delivered.',
         questions: [
           { id: 'arch_improvement', label: 'Have you made the firm faster, more efficient, or less error-prone in any specific operational domain?', type: 'textarea' },
           { id: 'arch_rating', label: 'Self-Rating (1–5):', type: 'rating' },
@@ -106,6 +116,8 @@ const SECTIONS = [
       {
         id: 'prioritization-framework',
         title: 'Prioritization Framework',
+        definition: 'You use a repeatable method — not instinct — to choose what to work on. The method includes explicit rules for sequencing, deferring, or declining work.',
+        evidence: 'Screenshot or link to your current prioritization view (Notion, task board, etc.). Include one example of a task you deprioritized or declined in the last 30 days and the rationale.',
         questions: [
           { id: 'prioritization_framework', label: 'What explicit system do you use to select your daily and weekly focus (e.g., Notion view, task board, SLA-based rules)?', type: 'textarea' },
           { id: 'urgent_vs_important', label: 'How do you distinguish between "urgent" operational fires and "important" strategic projects when they conflict?', type: 'textarea' },
@@ -115,6 +127,8 @@ const SECTIONS = [
       {
         id: 'operational-rhythm',
         title: 'Operational Rhythm ("Heartbeat")',
+        definition: 'You have named, recurring operational reviews (daily/weekly/monthly/quarterly) with fixed agendas, outputs, and follow-through — not just calendar holds.',
+        evidence: 'Provide 4 consecutive weeks of artifacts (agendas, checklists, or notes) from at least 2 recurring reviews. Each must show: what was reviewed, decisions made, and follow-up items with owners.',
         questions: [
           { id: 'ops_heartbeat', label: 'Do you have a structured cadence for weekly, monthly, quarterly, and annual operational tasks and reviews?', type: 'textarea' },
           { id: 'recurring_checklists', label: 'List your recurring checklists or views (e.g., "Monday Ops Review," "Quarterly Billing Prep," "Annual Vendor Review") and where they live.', type: 'textarea' },
@@ -124,6 +138,8 @@ const SECTIONS = [
       {
         id: 'project-management',
         title: 'Project Management Discipline',
+        definition: 'You maintain a structured, recurring ritual (weekly scrub) where every project and task is reviewed, status is updated, stale items are closed, and priorities are re-sequenced. Changes are recorded, not just discussed.',
+        evidence: 'Link to or attach the last 3 weekly scrub artifacts. Each must include: date, number of items reviewed, items closed, items re-prioritized, and any new items added with assigned owners.',
         questions: [
           { id: 'pm_discipline', label: 'Where is the master Operations Projects & Tasks list maintained (tool, board, or database)?', type: 'textarea' },
           { id: 'project_scrub', label: 'Do you conduct a weekly "project scrub" to update statuses, close items, and re-prioritize? If yes, describe the ritual (day/time, steps, participants).', type: 'textarea' },
@@ -140,6 +156,8 @@ const SECTIONS = [
       {
         id: 'meeting-governance',
         title: 'Meeting Governance & Action Execution',
+        definition: 'Meetings you lead or attend produce: (1) decisions with rationale, (2) action items with owners and dates, and (3) documented follow-through within one business day.',
+        evidence: 'Link to 3 recent meeting notes. Each must include: attendees, key decisions, action items with owners/dates, and evidence that at least 80% of action items were closed by the stated deadline.',
         questions: [
           { id: 'meeting_governance', label: 'After internal and vendor meetings, do you consistently capture key decisions, owners, due dates, and next steps?', type: 'textarea' },
           { id: 'action_tracking', label: 'Where are these action items tracked, and how do you monitor completion?', type: 'textarea' },
@@ -149,6 +167,8 @@ const SECTIONS = [
       {
         id: 'status-visibility',
         title: 'Status Visibility ("Single Source of Truth")',
+        definition: 'At any moment, you can produce a complete list of every open operational item — with owner, status, and next step — in under 2 minutes, without building it from scratch.',
+        evidence: 'Link to or screenshot the live view/report. It must include: task name, owner, status, due date, and next action. Confirm it is updated at least weekly.',
         questions: [
           { id: 'status_visibility', label: 'If asked right now, can you produce a view or report showing every open operational action item, its owner, current status, and next step?', type: 'textarea' },
           { id: 'status_system', label: 'Describe the system or view you rely on for this, and note any current gaps.', type: 'textarea' },
@@ -165,6 +185,8 @@ const SECTIONS = [
       {
         id: 'staff-accountability',
         title: 'Staff Accountability & Monitoring',
+        definition: 'Staff tasks have explicit assignments, visible deadlines, and an automatic follow-up mechanism — not verbal reminders or memory-based tracking.',
+        evidence: 'Show one example of a missed or at-risk staff deadline from the last 60 days. Include: the task, the assigned owner, the original deadline, how the system surfaced the miss, and the follow-up path taken.',
         questions: [
           { id: 'staff_accountability', label: 'How do you track completion of staff-level compliance and operational tasks (e.g., attestations, reviews, checklists)?', type: 'textarea' },
           { id: 'missed_deadlines', label: 'Describe your process for following up on missed deadlines or incomplete tasks.', type: 'textarea' },
@@ -181,6 +203,8 @@ const SECTIONS = [
       {
         id: 'policy-practice',
         title: 'Policy-to-Practice Audits',
+        definition: 'You can identify where day-to-day practice has drifted from written policy — and choose whether to update the policy or change the behavior, with a clear remediation plan.',
+        evidence: 'Provide 1 example: (1) link to the policy, (2) description of the drift, (3) impact or risk of the drift, and (4) your remediation decision (update policy or enforce behavior) with timeline and owner.',
         questions: [
           { id: 'policy_drift', label: 'In the last 6 months, have you identified any area where day-to-day practice has drifted from written policy?', type: 'textarea' },
           { id: 'policy_reconciliation', label: 'Describe one example and outline your proposed reconciliation plan (policy change vs. behavior change, timeline, and owner).', type: 'textarea' },
@@ -267,6 +291,8 @@ const SECTIONS = [
       {
         id: 'decision-making',
         title: 'Decision-Making & Autonomy',
+        definition: 'You use documented thresholds (dollar amount, risk level, client impact) to decide what you handle independently vs. escalate — and you escalate at the defined threshold, not based on comfort.',
+        evidence: 'Provide 2 decision memos or summaries from the last 90 days: one where you acted independently and one where you escalated. Each must include: the decision, the threshold or principle that guided it, and the outcome.',
         questions: [
           { id: 'independent_decisions', label: 'Independent Decisions: List 2–3 important operational decisions you made autonomously in the past 6 months. For each: What was the decision, what was the impact, and why did it not require escalation?', type: 'textarea' },
           { id: 'partner_decisions', label: 'Partner-Approval Decisions: List 2–3 decisions that required partner approval. For each: What was the decision, why did it require escalation, and what would need to change (policies, thresholds, trust, data) for you to make that type of decision independently in the future?', type: 'textarea' },
@@ -652,15 +678,31 @@ export default function App() {
                   <div key={subsection.id} className="bg-white rounded-lg border border-stone-200 overflow-hidden">
 
                     {/* Subsection header */}
-                    <div className="px-5 py-2.5 border-b border-stone-100 flex items-center justify-between">
-                      <h3 className="text-xs font-semibold text-stone-800">
-                        {subsection.title}
-                        <span className="text-stone-400 font-normal ml-1.5">({subsection.questions.length})</span>
-                      </h3>
-                      {subProg.completed > 0 && (
-                        <span className={`text-2xs font-medium ${subProg.completed === subProg.total ? 'text-sage-600' : 'text-stone-400'}`}>
-                          {subProg.completed === subProg.total ? 'Complete' : `${subProg.completed}/${subProg.total}`}
-                        </span>
+                    <div className="px-5 py-2.5 border-b border-stone-100">
+                      <div className="flex items-center justify-between">
+                        <h3 className="text-xs font-semibold text-stone-800">
+                          {subsection.title}
+                          <span className="text-stone-400 font-normal ml-1.5">({subsection.questions.length})</span>
+                        </h3>
+                        {subProg.completed > 0 && (
+                          <span className={`text-2xs font-medium ${subProg.completed === subProg.total ? 'text-sage-600' : 'text-stone-400'}`}>
+                            {subProg.completed === subProg.total ? 'Complete' : `${subProg.completed}/${subProg.total}`}
+                          </span>
+                        )}
+                      </div>
+                      {(subsection.definition || subsection.evidence) && (
+                        <div className="mt-2 space-y-1.5">
+                          {subsection.definition && (
+                            <p className="text-2xs text-stone-500 leading-relaxed">
+                              <span className="font-semibold text-stone-600">Definition:</span> {subsection.definition}
+                            </p>
+                          )}
+                          {subsection.evidence && (
+                            <p className="text-2xs text-stone-500 leading-relaxed">
+                              <span className="font-semibold text-stone-600">Evidence:</span> {subsection.evidence}
+                            </p>
+                          )}
+                        </div>
                       )}
                     </div>
 
