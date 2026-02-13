@@ -457,6 +457,7 @@ const QuestionField = ({ question, value, onChange, onBlur, questionNum }) => {
 export default function App() {
   const [user, setUser] = useState(null);
   const [activeSection, setActiveSection] = useState(0);
+  const [showIntro, setShowIntro] = useState(true);
   const [responses, setResponses] = useState({});
   const [saving, setSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState(null);
@@ -567,6 +568,41 @@ export default function App() {
 
   const currentSection = SECTIONS[activeSection];
   const progress = sectionProgress[activeSection];
+
+  if (showIntro) {
+    return (
+      <div className="min-h-screen bg-stone-50 font-sans text-stone-900 flex items-center justify-center px-6 py-10">
+        <div className="w-full max-w-3xl bg-white border border-stone-200 rounded-xl shadow-sm overflow-hidden">
+          <div className="px-8 py-6 border-b border-stone-200 flex items-center gap-3">
+            <img src={awmLogo} alt="Able Wealth Management" className="h-7 w-auto object-contain" />
+            <div>
+              <p className="text-2xs uppercase tracking-wide text-stone-500">Operations Assessment</p>
+              <h1 className="text-lg font-semibold text-stone-900">6-Month Self-Assessment</h1>
+            </div>
+          </div>
+
+          <div className="px-8 py-7">
+            <p className="text-sm text-stone-700 leading-relaxed">
+              We want to use this 6-month self-assessment to align on what “Director of Operations” looks like at our firm and to make the next 90 days concrete and measurable. This is not about writing a narrative or listing tasks completed. It is about demonstrating that you are building and running an operating system: clear priorities, documented workflows, controls, dashboards, and decision thresholds that reduce errors and reduce routine Partner involvement. Please answer directly and link evidence wherever possible. If something is not yet built, say so and provide a specific plan with an owner, a date, and the first step you will complete within 7 days. We will review this together and use it to determine the right scope, title alignment, and compensation going forward.
+            </p>
+
+            <div className="mt-7 flex justify-end">
+              <button
+                onClick={() => {
+                  setShowIntro(false);
+                  window.scrollTo(0, 0);
+                }}
+                className="flex items-center gap-1.5 px-4 py-2 rounded text-xs font-medium bg-stone-900 text-white hover:bg-stone-800 transition-colors"
+              >
+                Begin Assessment
+                <ChevronRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   // Running question counter across subsections
   let questionCounter = 0;
