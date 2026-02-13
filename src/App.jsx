@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { initializeApp } from 'firebase/app';
 import {
   getFirestore,
@@ -14,6 +14,8 @@ import {
 } from 'firebase/auth';
 import {
   Save,
+  Download,
+  Upload,
   CheckCircle,
   ChevronRight,
   ChevronLeft,
@@ -477,6 +479,7 @@ const QuestionField = ({ question, value, onChange, onBlur, questionNum }) => {
 
 export default function App() {
   const initialDraft = readLocalDraft();
+  const importFileRef = useRef(null);
   const [user, setUser] = useState(null);
   const [activeSection, setActiveSection] = useState(0);
   const [showIntro, setShowIntro] = useState(() => {
@@ -559,6 +562,63 @@ export default function App() {
       setSaving(false);
     }
   }, [user, responses]);
+
+  const exportProgressAsJson = () => {
+    try {
+      const payload = {
+        version: 1,
+        appId,
+        exportedAt: new Date().toISOString(),
+        lastSaved: lastSaved ? lastSaved.toISOString() : null,
+        responses,
+      };
+
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement('a');
+      const stamp = new Date().toISOString().slice(0, 10);
+      anchor.href = url;
+      anchor.download = `ops-assessment-progress-${stamp}.json`;
+      document.body.appendChild(anchor);
+      anchor.click();
+      document.body.removeChild(anchor);
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Export JSON error:', err);
+      alert('Could not export progress. Please try again.');
+    }
+  };
+
+  const importProgressFromJson = async (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const raw = await file.text();
+      const parsed = JSON.parse(raw);
+      const importedResponses = parsed?.responses;
+
+      if (!importedResponses || typeof importedResponses !== 'object' || Array.isArray(importedResponses)) {
+        throw new Error('Invalid progress file format');
+      }
+
+      const parsedLastSaved = parsed?.lastSaved ? new Date(parsed.lastSaved) : new Date();
+      const safeLastSaved = Number.isNaN(parsedLastSaved.getTime()) ? new Date() : parsedLastSaved;
+
+      setResponses(importedResponses);
+      setLastSaved(safeLastSaved);
+      writeLocalDraft(importedResponses, safeLastSaved.toISOString());
+      setSaveStatus('local');
+
+      await saveProgress(importedResponses);
+      alert('Progress loaded successfully.');
+    } catch (err) {
+      console.error('Import JSON error:', err);
+      alert('Could not load this file. Please use a valid exported progress JSON file.');
+    } finally {
+      event.target.value = '';
+    }
+  };
 
   const updateResponse = (id, value) => {
     setResponses(prev => {
@@ -655,7 +715,21 @@ export default function App() {
               <li>The first action step you will complete within the next 7 days</li>
             </ul>
 
-            <div className="mt-7 flex justify-end">
+            <div className="mt-7 flex flex-wrap gap-2 justify-end">
+              <button
+                onClick={exportProgressAsJson}
+                className="flex items-center gap-1 text-2xs font-medium px-3 py-2 rounded border border-stone-200 text-stone-600 hover:bg-stone-50 transition-colors"
+              >
+                <Download className="w-3 h-3" />
+                Export JSON
+              </button>
+              <button
+                onClick={() => importFileRef.current?.click()}
+                className="flex items-center gap-1 text-2xs font-medium px-3 py-2 rounded border border-stone-200 text-stone-600 hover:bg-stone-50 transition-colors"
+              >
+                <Upload className="w-3 h-3" />
+                Import JSON
+              </button>
               <button
                 onClick={() => {
                   window.localStorage.setItem('assessmentIntroDismissed', 'true');
@@ -667,6 +741,13 @@ export default function App() {
                 Begin Assessment
                 <ChevronRight className="w-3.5 h-3.5" />
               </button>
+              <input
+                ref={importFileRef}
+                type="file"
+                accept="application/json,.json"
+                onChange={importProgressFromJson}
+                className="hidden"
+              />
             </div>
           </div>
         </div>
@@ -778,6 +859,27 @@ export default function App() {
                 {saving ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />}
                 Save
               </button>
+              <button
+                onClick={exportProgressAsJson}
+                className="flex items-center gap-1 text-2xs font-medium px-2.5 py-1.5 rounded border border-stone-200 text-stone-600 hover:bg-stone-50 transition-colors"
+              >
+                <Download className="w-3 h-3" />
+                Export JSON
+              </button>
+              <button
+                onClick={() => importFileRef.current?.click()}
+                className="flex items-center gap-1 text-2xs font-medium px-2.5 py-1.5 rounded border border-stone-200 text-stone-600 hover:bg-stone-50 transition-colors"
+              >
+                <Upload className="w-3 h-3" />
+                Import JSON
+              </button>
+              <input
+                ref={importFileRef}
+                type="file"
+                accept="application/json,.json"
+                onChange={importProgressFromJson}
+                className="hidden"
+              />
             </div>
           </div>
           <div className="px-8 pb-2.5 flex items-baseline justify-between">
