@@ -40,6 +40,27 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 
 const appId = typeof __app_id !== 'undefined' ? __app_id : 'able-wealth-ops-assessment-v1';
+const LOCAL_DRAFT_KEY = `ops-assessment-draft-${appId}`;
+
+const readLocalDraft = () => {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = window.localStorage.getItem(LOCAL_DRAFT_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch (err) {
+    console.error('Local draft read error:', err);
+    return null;
+  }
+};
+
+const writeLocalDraft = (responses, savedAt = new Date().toISOString()) => {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem(LOCAL_DRAFT_KEY, JSON.stringify({ responses, savedAt }));
+  } catch (err) {
+    console.error('Local draft write error:', err);
+  }
+};
 
 // --- Data ---
 
@@ -455,16 +476,18 @@ const QuestionField = ({ question, value, onChange, onBlur, questionNum }) => {
 // --- App ---
 
 export default function App() {
+  const initialDraft = readLocalDraft();
   const [user, setUser] = useState(null);
   const [activeSection, setActiveSection] = useState(0);
   const [showIntro, setShowIntro] = useState(() => {
     if (typeof window === 'undefined') return true;
     return window.localStorage.getItem('assessmentIntroDismissed') !== 'true';
   });
-  const [responses, setResponses] = useState({});
+  const [responses, setResponses] = useState(initialDraft?.responses || {});
   const [saving, setSaving] = useState(false);
-  const [lastSaved, setLastSaved] = useState(null);
-  const [isLoaded, setIsLoaded] = useState(false);
+  const [lastSaved, setLastSaved] = useState(initialDraft?.savedAt ? new Date(initialDraft.savedAt) : null);
+  const [isLoaded, setIsLoaded] = useState(true);
+  const [saveStatus, setSaveStatus] = useState(initialDraft?.savedAt ? 'local' : null);
 
   // Auth
   useEffect(() => {
@@ -492,8 +515,12 @@ export default function App() {
     const unsubscribe = onSnapshot(docRef,
       (docSnap) => {
         if (docSnap.exists()) {
-          setResponses(docSnap.data().responses || {});
-          setLastSaved(docSnap.data().updatedAt?.toDate() || null);
+          const remoteResponses = docSnap.data().responses || {};
+          const remoteSavedAt = docSnap.data().updatedAt?.toDate() || null;
+          setResponses(remoteResponses);
+          setLastSaved(remoteSavedAt);
+          setSaveStatus('cloud');
+          writeLocalDraft(remoteResponses, remoteSavedAt ? remoteSavedAt.toISOString() : new Date().toISOString());
         }
         setIsLoaded(true);
       },
@@ -508,7 +535,13 @@ export default function App() {
   // Save
   const saveProgress = useCallback(async (newResponses) => {
     const data = newResponses || responses;
+    const now = new Date();
+    writeLocalDraft(data, now.toISOString());
+    setLastSaved(now);
+    setSaveStatus('local');
+
     if (!user) return;
+
     setSaving(true);
     try {
       const docRef = doc(db, 'artifacts', appId, 'users', user.uid, 'submissions', 'main');
@@ -518,16 +551,21 @@ export default function App() {
         userId: user.uid,
         status: 'in-progress'
       }, { merge: true });
-      setLastSaved(new Date());
+      setSaveStatus('cloud');
     } catch (err) {
       console.error("Save error:", err);
+      setSaveStatus('local');
     } finally {
       setSaving(false);
     }
   }, [user, responses]);
 
   const updateResponse = (id, value) => {
-    setResponses(prev => ({ ...prev, [id]: value }));
+    setResponses(prev => {
+      const next = { ...prev, [id]: value };
+      writeLocalDraft(next);
+      return next;
+    });
   };
 
   const handleBlur = () => {
@@ -711,6 +749,11 @@ export default function App() {
               {lastSaved && (
                 <span className="text-2xs text-stone-500 hidden sm:block mr-1">
                   Saved {lastSaved.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                </span>
+              )}
+              {saveStatus && (
+                <span className="text-2xs text-stone-500 hidden sm:block mr-1">
+                  {saveStatus === 'cloud' ? 'Synced to cloud' : 'Saved locally'}
                 </span>
               )}
               <button
