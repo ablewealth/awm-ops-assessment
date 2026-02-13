@@ -384,7 +384,7 @@ const RatingInput = ({ value, onChange }) => (
           className={`flex-1 py-2 rounded text-xs font-medium transition-all border
             ${value === num
               ? 'bg-stone-800 border-stone-800 text-white'
-              : 'bg-white border-stone-200 text-stone-400 hover:border-stone-300 hover:text-stone-600'}`}
+              : 'bg-white border-stone-200 text-stone-500 hover:border-stone-300 hover:text-stone-700'}`}
         >
           {num}
         </button>
@@ -392,7 +392,7 @@ const RatingInput = ({ value, onChange }) => (
     </div>
     <div className="flex justify-between mt-1.5 px-0.5">
       {RATING_LABELS.map((label, i) => (
-        <span key={label} className={`text-2xs ${value === i + 1 ? 'text-stone-700 font-medium' : 'text-stone-400'}`}>
+        <span key={label} className={`text-2xs ${value === i + 1 ? 'text-stone-800 font-medium' : 'text-stone-500'}`}>
           {label}
         </span>
       ))}
@@ -407,10 +407,10 @@ const QuestionField = ({ question, value, onChange, onBlur, questionNum }) => {
     <div className="question-row px-5 py-3.5 border-b border-stone-100">
       {/* Label row */}
       <div className="flex items-start gap-2 mb-1.5">
-        <span className={`text-2xs font-medium mt-px shrink-0 ${isFilled ? 'text-sage-600' : 'text-stone-400'}`}>
+        <span className={`text-2xs font-medium mt-px shrink-0 ${isFilled ? 'text-sage-600' : 'text-stone-500'}`}>
           {questionNum}.
         </span>
-        <label className="block text-xs text-stone-600 leading-relaxed">
+        <label className="block text-xs text-stone-700 leading-relaxed">
           {question.label}
         </label>
       </div>
@@ -595,10 +595,10 @@ export default function App() {
                 className={`nav-item w-full text-left block px-5 py-[7px] text-[13px]
                   ${isActive
                     ? 'nav-item-active text-stone-900 font-semibold'
-                    : 'text-stone-500 hover:text-stone-900 hover:bg-stone-50'
+                    : 'text-stone-600 hover:text-stone-900 hover:bg-stone-50'
                   }`}
               >
-                <span className="text-2xs text-stone-400 mr-1.5">{idx + 1}.</span>
+                <span className="text-2xs text-stone-500 mr-1.5">{idx + 1}.</span>
                 {section.title}
                 {isDone && <CheckCircle className="inline-block w-3 h-3 text-sage-500 ml-1 -mt-0.5" />}
               </button>
@@ -608,7 +608,7 @@ export default function App() {
 
         {/* Progress bar */}
         <div className="px-4 py-3 border-t border-stone-200 shrink-0">
-          <div className="flex justify-between text-2xs text-stone-400 mb-1">
+          <div className="flex justify-between text-2xs text-stone-500 mb-1">
             <span>{globalProgress.completed} of {globalProgress.total}</span>
             <span className="font-medium text-stone-600">{globalProgress.percent}%</span>
           </div>
@@ -624,28 +624,28 @@ export default function App() {
         {/* Header */}
         <div className="sticky top-0 z-10 bg-white border-b border-stone-200 shrink-0">
           <div className="px-8 py-2 flex items-center justify-between">
-            <div className="flex items-center gap-1.5 text-2xs text-stone-400">
+            <div className="flex items-center gap-1.5 text-2xs text-stone-500">
               <span>Assessment</span>
               <ChevronRight className="w-3 h-3" />
-              <span className="text-stone-600">{currentSection.title}</span>
+              <span className="text-stone-700">{currentSection.title}</span>
             </div>
             <div className="flex items-center gap-1.5">
               {lastSaved && (
-                <span className="text-2xs text-stone-400 hidden sm:block mr-1">
+                <span className="text-2xs text-stone-500 hidden sm:block mr-1">
                   Saved {lastSaved.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                 </span>
               )}
               <button
                 onClick={() => { if (activeSection > 0) { setActiveSection(activeSection - 1); window.scrollTo(0, 0); } }}
                 disabled={activeSection === 0}
-                className="flex items-center gap-0.5 text-2xs font-medium px-2.5 py-1.5 rounded border border-stone-200 text-stone-500 hover:bg-stone-50 disabled:opacity-25 transition-colors"
+                className="flex items-center gap-0.5 text-2xs font-medium px-2.5 py-1.5 rounded border border-stone-200 text-stone-600 hover:bg-stone-50 disabled:opacity-25 transition-colors"
               >
                 <ChevronLeft className="w-3 h-3" /> Prev
               </button>
               <button
                 onClick={() => { saveProgress(); if (activeSection < SECTIONS.length - 1) { setActiveSection(activeSection + 1); window.scrollTo(0, 0); } }}
                 disabled={activeSection === SECTIONS.length - 1}
-                className="flex items-center gap-0.5 text-2xs font-medium px-2.5 py-1.5 rounded border border-stone-200 text-stone-500 hover:bg-stone-50 disabled:opacity-25 transition-colors"
+                className="flex items-center gap-0.5 text-2xs font-medium px-2.5 py-1.5 rounded border border-stone-200 text-stone-600 hover:bg-stone-50 disabled:opacity-25 transition-colors"
               >
                 Next <ChevronRight className="w-3 h-3" />
               </button>
@@ -661,14 +661,14 @@ export default function App() {
           </div>
           <div className="px-8 pb-2.5 flex items-baseline justify-between">
             <h1 className="text-base font-semibold text-stone-900">{currentSection.title}</h1>
-            <span className="text-2xs text-stone-400">{progress.completed}/{progress.total} answered</span>
+            <span className="text-2xs text-stone-500">{progress.completed}/{progress.total} answered</span>
           </div>
         </div>
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto bg-stone-50">
           <div className="max-w-4xl px-8 py-5">
-            <p className="text-xs text-stone-500 mb-5 leading-relaxed">{currentSection.description}</p>
+            <p className="text-xs text-stone-600 mb-5 leading-relaxed">{currentSection.description}</p>
 
             {/* Subsection cards */}
             <div className="space-y-4">
@@ -682,10 +682,10 @@ export default function App() {
                       <div className="flex items-center justify-between">
                         <h3 className="text-xs font-semibold text-stone-800">
                           {subsection.title}
-                          <span className="text-stone-400 font-normal ml-1.5">({subsection.questions.length})</span>
+                          <span className="text-stone-500 font-normal ml-1.5">({subsection.questions.length})</span>
                         </h3>
                         {subProg.completed > 0 && (
-                          <span className={`text-2xs font-medium ${subProg.completed === subProg.total ? 'text-sage-600' : 'text-stone-400'}`}>
+                          <span className={`text-2xs font-medium ${subProg.completed === subProg.total ? 'text-sage-600' : 'text-stone-500'}`}>
                             {subProg.completed === subProg.total ? 'Complete' : `${subProg.completed}/${subProg.total}`}
                           </span>
                         )}
@@ -693,13 +693,13 @@ export default function App() {
                       {(subsection.definition || subsection.evidence) && (
                         <div className="mt-2 space-y-1.5">
                           {subsection.definition && (
-                            <p className="text-2xs text-stone-500 leading-relaxed">
-                              <span className="font-semibold text-stone-600">Definition:</span> {subsection.definition}
+                            <p className="text-2xs text-stone-600 leading-relaxed">
+                              <span className="font-semibold text-stone-700">Definition:</span> {subsection.definition}
                             </p>
                           )}
                           {subsection.evidence && (
-                            <p className="text-2xs text-stone-500 leading-relaxed">
-                              <span className="font-semibold text-stone-600">Evidence:</span> {subsection.evidence}
+                            <p className="text-2xs text-stone-600 leading-relaxed">
+                              <span className="font-semibold text-stone-700">Evidence:</span> {subsection.evidence}
                             </p>
                           )}
                         </div>
