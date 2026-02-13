@@ -1,11 +1,10 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { initializeApp } from 'firebase/app';
 import {
   getFirestore,
   doc,
   setDoc,
-  onSnapshot,
-  collection
+  onSnapshot
 } from 'firebase/firestore';
 import {
   getAuth,
@@ -19,15 +18,7 @@ import {
   ChevronRight,
   ChevronLeft,
   Loader2,
-  ArrowUpRight,
-  FileText,
-  Clock,
-  ShieldCheck,
-  BarChart3,
-  Zap,
-  Users,
-  Lightbulb,
-  Target
+  ArrowUpRight
 } from 'lucide-react';
 import awmLogo from '/awm-logo.png';
 
@@ -359,10 +350,6 @@ const SECTIONS = [
   }
 ];
 
-const ICON_MAP = {
-  FileText, Clock, ShieldCheck, BarChart3, Zap, Users, Lightbulb, Target
-};
-
 const RatingInput = ({ value, onChange }) => {
   return (
     <div className="mt-2">
@@ -496,18 +483,18 @@ export default function App() {
   const progress = sectionProgress[activeSection];
 
   return (
-    <div className="min-h-screen bg-stone-50 font-sans text-stone-900 flex flex-col md:flex-row">
+    <div className="min-h-screen bg-white font-sans text-stone-900 flex flex-col md:flex-row">
       {/* Sidebar */}
-      <aside className="w-full md:w-64 lg:w-72 bg-white border-r border-stone-200 flex flex-col h-auto md:h-screen md:sticky md:top-0 shrink-0">
-        <div className="px-5 py-5 border-b border-stone-100">
-          <img src={awmLogo} alt="Able Wealth Management" className="h-8 w-auto" />
+      <aside className="w-full md:w-56 lg:w-60 bg-white border-r border-stone-200 flex flex-col h-auto md:h-screen md:sticky md:top-0 shrink-0">
+        <div className="h-14 flex items-center px-5 border-b border-stone-200">
+          <img src={awmLogo} alt="Able Wealth Management" className="max-h-7 max-w-[160px] object-contain object-left" />
         </div>
 
-        <div className="px-3 pt-4 pb-2">
-          <p className="px-3 text-[11px] font-semibold uppercase tracking-wider text-stone-400">Assessment</p>
+        <div className="px-4 pt-5 pb-1">
+          <p className="px-2 text-[11px] font-semibold uppercase tracking-wider text-stone-400">Sections</p>
         </div>
 
-        <nav className="flex-1 overflow-y-auto px-3 pb-3">
+        <nav className="flex-1 overflow-y-auto px-4 pb-3">
           {SECTIONS.map((section, idx) => {
             const isActive = activeSection === idx;
             const prog = sectionProgress[idx];
@@ -516,37 +503,34 @@ export default function App() {
               <button
                 key={section.id}
                 onClick={() => { setActiveSection(idx); window.scrollTo(0, 0); }}
-                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-all mb-px relative
+                className={`w-full text-left px-2 py-2 transition-all relative
                   ${isActive
-                    ? 'bg-stone-800 text-white'
-                    : 'text-stone-600 hover:bg-stone-50 hover:text-stone-900'
+                    ? 'text-stone-900 font-semibold'
+                    : 'text-stone-500 hover:text-stone-800'
                   }`}
+                style={isActive ? { borderLeft: '3px solid #292524', paddingLeft: '5px', marginLeft: '0' } : { borderLeft: '3px solid transparent', paddingLeft: '5px' }}
               >
-                <div className="flex-1 min-w-0">
-                  <p className={`text-[13px] truncate ${isActive ? 'font-semibold' : 'font-medium'}`}>
-                    {section.title}
-                  </p>
+                <div className="flex items-center justify-between">
+                  <span className="text-[13px] truncate block">{section.title}</span>
+                  {isDone ? (
+                    <CheckCircle className="w-3.5 h-3.5 shrink-0 text-sage-500 ml-2" />
+                  ) : prog.completed > 0 ? (
+                    <span className="text-[10px] text-stone-400 shrink-0 ml-2">{prog.completed}/{prog.total}</span>
+                  ) : null}
                 </div>
-                {isDone ? (
-                  <CheckCircle className={`w-4 h-4 shrink-0 ${isActive ? 'text-sage-300' : 'text-sage-500'}`} />
-                ) : prog.completed > 0 ? (
-                  <span className={`text-[11px] shrink-0 ${isActive ? 'text-stone-300' : 'text-stone-400'}`}>
-                    {prog.completed}/{prog.total}
-                  </span>
-                ) : null}
               </button>
             );
           })}
         </nav>
 
-        <div className="px-5 py-4 border-t border-stone-100">
-          <div className="flex justify-between text-xs text-stone-500 mb-2">
+        <div className="px-5 py-4 border-t border-stone-200">
+          <div className="flex justify-between text-[11px] text-stone-400 mb-1.5">
             <span>Progress</span>
-            <span className="font-medium text-stone-700">{globalProgress.percent}%</span>
+            <span className="font-medium text-stone-600">{globalProgress.percent}%</span>
           </div>
-          <div className="w-full bg-stone-100 h-1.5 rounded-full overflow-hidden">
+          <div className="w-full bg-stone-100 h-1 rounded-full overflow-hidden">
             <div
-              className="h-full bg-stone-800 rounded-full transition-all duration-500"
+              className="h-full bg-stone-700 rounded-full transition-all duration-500"
               style={{ width: `${globalProgress.percent}%` }}
             />
           </div>
@@ -554,27 +538,27 @@ export default function App() {
       </aside>
 
       {/* Main */}
-      <main className="flex-1 overflow-y-auto">
+      <main className="flex-1 overflow-y-auto bg-stone-50">
         {/* Top bar */}
         <div className="sticky top-0 z-10 bg-white border-b border-stone-200">
-          <div className="max-w-3xl mx-auto px-6 md:px-10 py-3 flex items-center justify-between">
-            <div className="flex items-center gap-2 text-sm text-stone-400">
+          <div className="px-6 md:px-10 py-3 flex items-center justify-between">
+            <div className="flex items-center gap-1.5 text-sm text-stone-400">
               <span>Operations Self-Assessment</span>
               <ChevronRight className="w-3.5 h-3.5" />
-              <span className="text-stone-700 font-medium">Section {activeSection + 1} of {SECTIONS.length}</span>
+              <span className="text-stone-900 font-medium">{currentSection.title}</span>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
               {lastSaved && (
-                <span className="text-xs text-stone-400 hidden sm:block">
+                <span className="text-[11px] text-stone-400 hidden sm:block">
                   Saved {lastSaved.toLocaleTimeString()}
                 </span>
               )}
               <button
                 onClick={() => saveProgress()}
                 disabled={saving}
-                className="flex items-center gap-1.5 text-sm font-medium px-4 py-2 rounded-lg bg-stone-800 text-white hover:bg-stone-900 disabled:opacity-40 transition-colors"
+                className="flex items-center gap-1.5 text-[13px] font-medium px-3.5 py-1.5 rounded-md bg-stone-900 text-white hover:bg-stone-800 disabled:opacity-40 transition-colors"
               >
-                {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
                 Save
               </button>
             </div>
@@ -582,39 +566,39 @@ export default function App() {
         </div>
 
         {/* Content */}
-        <div className="max-w-3xl mx-auto px-6 md:px-10 py-10 md:py-12">
+        <div className="max-w-3xl mx-auto px-6 md:px-10 py-8 md:py-10">
           {/* Section header */}
-          <div className="mb-10">
-            <h2 className="text-2xl font-bold text-stone-900 leading-tight">
+          <div className="mb-8">
+            <h2 className="text-xl font-bold text-stone-900 leading-tight">
               {currentSection.title}
             </h2>
-            <p className="text-sm text-stone-500 mt-2 leading-relaxed">
+            <p className="text-sm text-stone-500 mt-1.5 leading-relaxed">
               {currentSection.description}
             </p>
-            <div className="flex items-center gap-3 mt-4">
-              <div className="flex-1 max-w-[120px] bg-stone-100 h-1 rounded-full overflow-hidden">
+            <div className="flex items-center gap-2.5 mt-3">
+              <div className="w-24 bg-stone-200 h-1 rounded-full overflow-hidden">
                 <div
-                  className={`h-full rounded-full transition-all duration-500 ${progress.percent === 100 ? 'bg-sage-500' : 'bg-stone-800'}`}
+                  className={`h-full rounded-full transition-all duration-500 ${progress.percent === 100 ? 'bg-sage-500' : 'bg-stone-700'}`}
                   style={{ width: `${progress.percent}%` }}
                 />
               </div>
-              <span className="text-xs text-stone-400">{progress.completed} of {progress.total} answered</span>
+              <span className="text-[11px] text-stone-400">{progress.completed} of {progress.total} answered</span>
             </div>
           </div>
 
           {/* Questions */}
-          <div className="space-y-8">
+          <div className="space-y-7">
             {currentSection.subsections.map((subsection) => (
-              <div key={subsection.id} className="space-y-4">
-                <h3 className="text-base font-semibold text-stone-800">
+              <div key={subsection.id} className="space-y-3">
+                <h3 className="text-sm font-semibold text-stone-700 uppercase tracking-wide">
                   {subsection.title}
                 </h3>
 
-                <div className="space-y-3">
+                <div className="space-y-2.5">
                   {subsection.questions.map((q) => (
                     <div key={q.id} className="bg-white rounded-lg border border-stone-200 overflow-hidden">
-                      <div className="px-5 pt-4 pb-4">
-                        <label className="block text-sm text-stone-600 leading-relaxed mb-2.5">
+                      <div className="px-5 py-4">
+                        <label className="block text-[13px] text-stone-600 leading-relaxed mb-2">
                           {q.label}
                         </label>
 
@@ -622,23 +606,23 @@ export default function App() {
                           <textarea
                             value={responses[q.id] || ''}
                             onChange={(e) => updateResponse(q.id, e.target.value)}
-                            rows={4}
+                            rows={3}
                             placeholder="Type your response here..."
-                            className="w-full p-3 border border-stone-200 rounded-lg text-sm leading-relaxed focus:ring-2 focus:ring-stone-200 focus:border-stone-400 transition-all outline-none resize-none bg-stone-50/50 placeholder:text-stone-300"
+                            className="w-full p-3 border border-stone-200 rounded-md text-sm leading-relaxed focus:ring-1 focus:ring-stone-300 focus:border-stone-400 transition-all outline-none resize-none bg-stone-50/50 placeholder:text-stone-300"
                           />
                         )}
 
                         {q.type === 'text' && (
                           <div className="relative">
                             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-stone-400">
-                              <ArrowUpRight className="w-4 h-4" />
+                              <ArrowUpRight className="w-3.5 h-3.5" />
                             </div>
                             <input
                               type="text"
                               value={responses[q.id] || ''}
                               onChange={(e) => updateResponse(q.id, e.target.value)}
                               placeholder="Paste a link or type a brief reference..."
-                              className="w-full pl-9 pr-4 py-2.5 border border-stone-200 rounded-lg text-sm focus:ring-2 focus:ring-stone-200 focus:border-stone-400 transition-all outline-none bg-stone-50/50 placeholder:text-stone-300"
+                              className="w-full pl-9 pr-4 py-2 border border-stone-200 rounded-md text-sm focus:ring-1 focus:ring-stone-300 focus:border-stone-400 transition-all outline-none bg-stone-50/50 placeholder:text-stone-300"
                             />
                           </div>
                         )}
@@ -662,14 +646,14 @@ export default function App() {
           </div>
 
           {/* Navigation */}
-          <div className="mt-10 flex items-center justify-between pb-12">
+          <div className="mt-10 flex items-center justify-between pb-10">
             <button
               onClick={() => {
                 setActiveSection(Math.max(0, activeSection - 1));
                 window.scrollTo(0, 0);
               }}
               disabled={activeSection === 0}
-              className="flex items-center gap-2 text-sm font-medium text-stone-400 hover:text-stone-700 disabled:opacity-0 transition-colors"
+              className="flex items-center gap-1.5 text-[13px] font-medium text-stone-400 hover:text-stone-700 disabled:opacity-0 transition-colors"
             >
               <ChevronLeft className="w-4 h-4" />
               Previous
@@ -682,7 +666,7 @@ export default function App() {
                   setActiveSection(activeSection + 1);
                   window.scrollTo(0, 0);
                 }}
-                className="flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold bg-stone-800 text-white hover:bg-stone-900 transition-colors"
+                className="flex items-center gap-1.5 px-4 py-2 rounded-md text-[13px] font-semibold bg-stone-900 text-white hover:bg-stone-800 transition-colors"
               >
                 Continue to Next Section
                 <ChevronRight className="w-4 h-4" />
@@ -693,7 +677,7 @@ export default function App() {
                   saveProgress();
                   alert("Assessment progress saved successfully for final review.");
                 }}
-                className="flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold bg-sage-600 text-white hover:bg-sage-700 transition-colors"
+                className="flex items-center gap-1.5 px-4 py-2 rounded-md text-[13px] font-semibold bg-sage-600 text-white hover:bg-sage-700 transition-colors"
               >
                 <CheckCircle className="w-4 h-4" />
                 Submit for Review
