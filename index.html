@@ -7,26 +7,27 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Lora:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script>
       tailwind.config = {
         theme: {
           extend: {
             fontFamily: {
               sans: ['Inter', 'system-ui', 'sans-serif'],
+              serif: ['Lora', 'Georgia', 'serif'],
             },
             colors: {
-              navy: {
-                50: '#f0f4f8',
-                100: '#d9e2ec',
-                200: '#bcccdc',
-                300: '#9fb3c8',
-                400: '#829ab1',
-                500: '#627d98',
-                600: '#486581',
-                700: '#334e68',
-                800: '#243b53',
-                900: '#102a43',
+              sage: {
+                50: '#f4f7f4',
+                100: '#e4ebe5',
+                200: '#c9d7cb',
+                300: '#a3bda7',
+                400: '#779d7d',
+                500: '#588061',
+                600: '#44664c',
+                700: '#38523e',
+                800: '#2f4334',
+                900: '#28382c',
               }
             }
           },
@@ -37,7 +38,7 @@
       * { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
     </style>
   </head>
-  <body class="bg-navy-50">
+  <body class="bg-stone-50">
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
   </body>
