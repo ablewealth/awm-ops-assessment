@@ -499,10 +499,8 @@ export default function App() {
       {/* Sidebar */}
       <aside className="w-full md:w-72 lg:w-80 bg-white border-r border-stone-200 flex flex-col h-auto md:h-screen md:sticky md:top-0 shrink-0">
         <div className="px-6 pt-8 pb-6 border-b border-stone-200">
-          <h1 className="font-serif text-lg font-bold text-stone-900 tracking-tight">
-            Able Wealth Management
-          </h1>
-          <p className="text-sm text-stone-400 mt-1">Operations Self-Assessment</p>
+          <img src="/awm-logo.png" alt="Able Wealth Management" className="h-10 w-auto" />
+          <p className="text-sm text-stone-400 mt-2">Operations Self-Assessment</p>
         </div>
 
         <nav className="flex-1 overflow-y-auto py-3 px-3">
@@ -581,7 +579,7 @@ export default function App() {
         <div className="max-w-3xl mx-auto px-6 md:px-10 py-10 md:py-14">
           {/* Section header */}
           <div className="mb-10">
-            <h2 className="font-serif text-2xl md:text-3xl font-bold text-stone-900 leading-tight">
+            <h2 className="font-sans text-2xl md:text-3xl font-bold text-stone-900 leading-tight">
               {currentSection.title}
             </h2>
             <p className="text-base text-stone-500 mt-3 leading-relaxed">
@@ -602,7 +600,7 @@ export default function App() {
           <div className="space-y-10">
             {currentSection.subsections.map((subsection) => (
               <div key={subsection.id} className="space-y-5">
-                <h3 className="font-serif text-lg font-semibold text-stone-800">
+                <h3 className="font-sans text-lg font-semibold text-stone-800">
                   {subsection.title}
                 </h3>
 
