@@ -1,10 +1,17 @@
-import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { initializeApp } from 'firebase/app';
 import {
   getFirestore,
   doc,
   setDoc,
-  onSnapshot
+  onSnapshot,
+  collection,
+  addDoc,
+  serverTimestamp,
+  query,
+  orderBy,
+  limit,
+  getDocs
 } from 'firebase/firestore';
 import {
   getAuth,
@@ -14,17 +21,22 @@ import {
 } from 'firebase/auth';
 import {
   Save,
-  Download,
-  Upload,
   CheckCircle,
   ChevronRight,
   ChevronLeft,
   Loader2,
-  Link2
+  ArrowUpRight,
+  FileText,
+  Clock,
+  ShieldCheck,
+  BarChart3,
+  Zap,
+  Users,
+  Lightbulb,
+  Target,
+  CircleDot,
+  ClipboardCheck
 } from 'lucide-react';
-import awmLogo from '/awm-logo.png';
-
-// --- Firebase setup ---
 
 const firebaseConfig = typeof __firebase_config !== 'undefined'
   ? JSON.parse(__firebase_config)
@@ -42,29 +54,6 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 
 const appId = typeof __app_id !== 'undefined' ? __app_id : 'able-wealth-ops-assessment-v1';
-const LOCAL_DRAFT_KEY = `ops-assessment-draft-${appId}`;
-
-const readLocalDraft = () => {
-  if (typeof window === 'undefined') return null;
-  try {
-    const raw = window.localStorage.getItem(LOCAL_DRAFT_KEY);
-    return raw ? JSON.parse(raw) : null;
-  } catch (err) {
-    console.error('Local draft read error:', err);
-    return null;
-  }
-};
-
-const writeLocalDraft = (responses, savedAt = new Date().toISOString()) => {
-  if (typeof window === 'undefined') return;
-  try {
-    window.localStorage.setItem(LOCAL_DRAFT_KEY, JSON.stringify({ responses, savedAt }));
-  } catch (err) {
-    console.error('Local draft write error:', err);
-  }
-};
-
-// --- Data ---
 
 const RATING_LABELS = ['Developing', 'Building', 'Competent', 'Strong', 'Mastery'];
 
@@ -72,13 +61,12 @@ const SECTIONS = [
   {
     id: 'section-1',
     title: 'System Architecture & SOP Rigor',
-    description: 'Designing an operational factory that is accurate, scalable, and low-friction.',
+    icon: 'FileText',
+    description: 'Designing an operational factory that is accurate, scalable, and low-friction',
     subsections: [
       {
         id: 'sop-integrity',
         title: 'SOP Integrity & Repeatability',
-        definition: 'A new hire can complete a core operational task correctly using only your written SOP — no Slack messages, verbal walkthroughs, or tribal knowledge required.',
-        evidence: 'Link to 3 SOPs. Each must include: step-by-step instructions, required system fields or inputs, expected outputs, and an embedded QC checkpoint.',
         questions: [
           { id: 'sop_integrity', label: 'Do your current SOPs enable a new hire to complete core tasks correctly using only your documentation (no verbal support)?', type: 'textarea' },
           { id: 'critical_workflows', label: 'Identify 3–5 critical workflows (e.g., client onboarding, money movement, billing exceptions) where SOPs are currently "audit-ready."', type: 'textarea' },
@@ -88,8 +76,6 @@ const SECTIONS = [
       {
         id: 'vendor-integration',
         title: 'New Vendor Integration',
-        definition: 'Every vendor added in the last 6 months has a complete internal page that includes: login/access instructions, firm-specific use case, troubleshooting steps, and an identified internal owner.',
-        evidence: 'Link to vendor internal pages for the last 3 tools/vendors onboarded. Each page must contain all four elements listed above.',
         questions: [
           { id: 'vendor_integration', label: 'For each vendor added in the last 6 months, have you created: access/login documentation, troubleshooting steps, and defined firm-use cases?', type: 'textarea' },
           { id: 'recent_vendors', label: 'List the last 3 vendors or major tools integrated and link to their internal SOPs or configuration notes.', type: 'textarea' },
@@ -98,8 +84,6 @@ const SECTIONS = [
       {
         id: 'root-cause',
         title: 'Root-Cause System Design',
-        definition: 'When an error occurs, you can identify the system condition that allowed it — not just the person who made it — and implement a process-level or system-level fix.',
-        evidence: 'Provide 3 examples from the last 90 days using a 5-part structure: (1) Error description, (2) Immediate fix, (3) Root cause identified, (4) Permanent system change implemented, (5) How you verified the fix is holding.',
         questions: [
           { id: 'root_cause_process', label: 'When an error occurs (e.g., NIGO, billing exception), what is your standard process for identifying root cause and implementing a system-level fix?', type: 'textarea' },
           { id: 'permanent_fixes', label: 'In the last 90 days, list at least 3 issues where you implemented a permanent process change (not just a one-time fix) and describe the change.', type: 'textarea' },
@@ -108,8 +92,6 @@ const SECTIONS = [
       {
         id: 'process-simplification',
         title: 'Process Simplification & Technical Debt',
-        definition: 'You have removed steps, handoffs, or manual checks from a workflow while maintaining control quality — making it faster without making it riskier.',
-        evidence: 'Provide before/after summaries for 2 workflows simplified in the last 90 days. Include: steps removed, time saved per cycle, and confirmation that output quality was maintained.',
         questions: [
           { id: 'process_debt_id', label: 'How do you identify "process debt" (legacy steps, duplicate checks, unnecessary handoffs)?', type: 'textarea' },
           { id: 'process_simplification_count', label: 'In the last 90 days, how many steps have you removed, consolidated, or automated in core workflows?', type: 'textarea' },
@@ -119,8 +101,6 @@ const SECTIONS = [
       {
         id: 'operational-architecture',
         title: 'Operational Architecture',
-        definition: 'You have built or redesigned a system so it runs consistently — with defined owners, inputs, outputs, and quality checks — rather than depending on memory or ad hoc effort.',
-        evidence: 'Provide a process map or narrative for 1 system you built or materially improved. Must include: trigger event, step sequence, responsible party, QC checkpoint, and where the output is stored/delivered.',
         questions: [
           { id: 'arch_improvement', label: 'Have you made the firm faster, more efficient, or less error-prone in any specific operational domain?', type: 'textarea' },
           { id: 'arch_rating', label: 'Self-Rating (1–5):', type: 'rating' },
@@ -134,13 +114,12 @@ const SECTIONS = [
   {
     id: 'section-2',
     title: 'Time Governance & Prioritization',
+    icon: 'Clock',
     description: "Managing your time and the firm's capacity through systems, not memory.",
     subsections: [
       {
         id: 'prioritization-framework',
         title: 'Prioritization Framework',
-        definition: 'You use a repeatable method — not instinct — to choose what to work on. The method includes explicit rules for sequencing, deferring, or declining work.',
-        evidence: 'Screenshot or link to your current prioritization view (Notion, task board, etc.). Include one example of a task you deprioritized or declined in the last 30 days and the rationale.',
         questions: [
           { id: 'prioritization_framework', label: 'What explicit system do you use to select your daily and weekly focus (e.g., Notion view, task board, SLA-based rules)?', type: 'textarea' },
           { id: 'urgent_vs_important', label: 'How do you distinguish between "urgent" operational fires and "important" strategic projects when they conflict?', type: 'textarea' },
@@ -150,8 +129,6 @@ const SECTIONS = [
       {
         id: 'operational-rhythm',
         title: 'Operational Rhythm ("Heartbeat")',
-        definition: 'You have named, recurring operational reviews (daily/weekly/monthly/quarterly) with fixed agendas, outputs, and follow-through — not just calendar holds.',
-        evidence: 'Provide 4 consecutive weeks of artifacts (agendas, checklists, or notes) from at least 2 recurring reviews. Each must show: what was reviewed, decisions made, and follow-up items with owners.',
         questions: [
           { id: 'ops_heartbeat', label: 'Do you have a structured cadence for weekly, monthly, quarterly, and annual operational tasks and reviews?', type: 'textarea' },
           { id: 'recurring_checklists', label: 'List your recurring checklists or views (e.g., "Monday Ops Review," "Quarterly Billing Prep," "Annual Vendor Review") and where they live.', type: 'textarea' },
@@ -161,8 +138,6 @@ const SECTIONS = [
       {
         id: 'project-management',
         title: 'Project Management Discipline',
-        definition: 'You maintain a structured, recurring ritual (weekly scrub) where every project and task is reviewed, status is updated, stale items are closed, and priorities are re-sequenced. Changes are recorded, not just discussed.',
-        evidence: 'Link to or attach the last 3 weekly scrub artifacts. Each must include: date, number of items reviewed, items closed, items re-prioritized, and any new items added with assigned owners.',
         questions: [
           { id: 'pm_discipline', label: 'Where is the master Operations Projects & Tasks list maintained (tool, board, or database)?', type: 'textarea' },
           { id: 'project_scrub', label: 'Do you conduct a weekly "project scrub" to update statuses, close items, and re-prioritize? If yes, describe the ritual (day/time, steps, participants).', type: 'textarea' },
@@ -173,14 +148,13 @@ const SECTIONS = [
   },
   {
     id: 'section-3',
-    title: 'Compliance, Staff Dev & Execution',
+    title: 'Compliance Oversight, Staff Development, & Execution',
+    icon: 'ShieldCheck',
     description: 'Ensuring people, processes, and policies are aligned and consistently executed.',
     subsections: [
       {
         id: 'meeting-governance',
         title: 'Meeting Governance & Action Execution',
-        definition: 'Meetings you lead or attend produce: (1) decisions with rationale, (2) action items with owners and dates, and (3) documented follow-through within one business day.',
-        evidence: 'Link to 3 recent meeting notes. Each must include: attendees, key decisions, action items with owners/dates, and evidence that at least 80% of action items were closed by the stated deadline.',
         questions: [
           { id: 'meeting_governance', label: 'After internal and vendor meetings, do you consistently capture key decisions, owners, due dates, and next steps?', type: 'textarea' },
           { id: 'action_tracking', label: 'Where are these action items tracked, and how do you monitor completion?', type: 'textarea' },
@@ -190,8 +164,6 @@ const SECTIONS = [
       {
         id: 'status-visibility',
         title: 'Status Visibility ("Single Source of Truth")',
-        definition: 'At any moment, you can produce a complete list of every open operational item — with owner, status, and next step — in under 2 minutes, without building it from scratch.',
-        evidence: 'Link to or screenshot the live view/report. It must include: task name, owner, status, due date, and next action. Confirm it is updated at least weekly.',
         questions: [
           { id: 'status_visibility', label: 'If asked right now, can you produce a view or report showing every open operational action item, its owner, current status, and next step?', type: 'textarea' },
           { id: 'status_system', label: 'Describe the system or view you rely on for this, and note any current gaps.', type: 'textarea' },
@@ -208,8 +180,6 @@ const SECTIONS = [
       {
         id: 'staff-accountability',
         title: 'Staff Accountability & Monitoring',
-        definition: 'Staff tasks have explicit assignments, visible deadlines, and an automatic follow-up mechanism — not verbal reminders or memory-based tracking.',
-        evidence: 'Show one example of a missed or at-risk staff deadline from the last 60 days. Include: the task, the assigned owner, the original deadline, how the system surfaced the miss, and the follow-up path taken.',
         questions: [
           { id: 'staff_accountability', label: 'How do you track completion of staff-level compliance and operational tasks (e.g., attestations, reviews, checklists)?', type: 'textarea' },
           { id: 'missed_deadlines', label: 'Describe your process for following up on missed deadlines or incomplete tasks.', type: 'textarea' },
@@ -226,8 +196,6 @@ const SECTIONS = [
       {
         id: 'policy-practice',
         title: 'Policy-to-Practice Audits',
-        definition: 'You can identify where day-to-day practice has drifted from written policy — and choose whether to update the policy or change the behavior, with a clear remediation plan.',
-        evidence: 'Provide 1 example: (1) link to the policy, (2) description of the drift, (3) impact or risk of the drift, and (4) your remediation decision (update policy or enforce behavior) with timeline and owner.',
         questions: [
           { id: 'policy_drift', label: 'In the last 6 months, have you identified any area where day-to-day practice has drifted from written policy?', type: 'textarea' },
           { id: 'policy_reconciliation', label: 'Describe one example and outline your proposed reconciliation plan (policy change vs. behavior change, timeline, and owner).', type: 'textarea' },
@@ -238,6 +206,7 @@ const SECTIONS = [
   {
     id: 'section-4',
     title: 'Risk & Financial Stewardship',
+    icon: 'BarChart3',
     description: "Protecting the firm's economics and fiduciary posture.",
     subsections: [
       {
@@ -260,7 +229,8 @@ const SECTIONS = [
   },
   {
     id: 'section-5',
-    title: 'Time Leaks, Automation & Future Focus',
+    title: 'Time Leaks, Automation, and Future Focus',
+    icon: 'Zap',
     description: 'Reclaiming your time for high-leverage work.',
     subsections: [
       {
@@ -292,7 +262,8 @@ const SECTIONS = [
   {
     id: 'section-6',
     title: 'Director-Level Leadership & Autonomy',
-    description: 'Demonstrating ownership, initiative, and director-level decision-making.',
+    icon: 'Users',
+    description: "Demonstrating ownership, initiative, and director-level decision-making. Framing: Associates ask \"What should I do?\" Directors say \"Here is what I've done.\"",
     subsections: [
       {
         id: 'proactive-resolution',
@@ -314,8 +285,6 @@ const SECTIONS = [
       {
         id: 'decision-making',
         title: 'Decision-Making & Autonomy',
-        definition: 'You use documented thresholds (dollar amount, risk level, client impact) to decide what you handle independently vs. escalate — and you escalate at the defined threshold, not based on comfort.',
-        evidence: 'Provide 2 decision memos or summaries from the last 90 days: one where you acted independently and one where you escalated. Each must include: the decision, the threshold or principle that guided it, and the outcome.',
         questions: [
           { id: 'independent_decisions', label: 'Independent Decisions: List 2–3 important operational decisions you made autonomously in the past 6 months. For each: What was the decision, what was the impact, and why did it not require escalation?', type: 'textarea' },
           { id: 'partner_decisions', label: 'Partner-Approval Decisions: List 2–3 decisions that required partner approval. For each: What was the decision, why did it require escalation, and what would need to change (policies, thresholds, trust, data) for you to make that type of decision independently in the future?', type: 'textarea' },
@@ -338,13 +307,14 @@ const SECTIONS = [
   {
     id: 'section-7',
     title: 'Problem Solving Rating',
+    icon: 'Lightbulb',
     description: 'Evaluating your ability to diagnose issues, weigh options, and implement durable solutions.',
     subsections: [
       {
         id: 'problem-solving-rating',
         title: 'Self-Rating: Problem Solving (1–5)',
         questions: [
-          { id: 'ps_rating', label: 'On a scale of 1–5 (1 = needs significant improvement, 5 = outstanding), how would you rate your problem-solving over the last 6 months?', type: 'rating' },
+          { id: 'ps_rating', label: 'On a scale of 1–5 (1 = needs significant improvement, 5 = outstanding), how would you rate your problem-solving over the last 6 months? Score:', type: 'rating' },
         ]
       },
       {
@@ -367,20 +337,21 @@ const SECTIONS = [
   {
     id: 'section-8',
     title: 'Strategic Clarity Rating',
+    icon: 'Target',
     description: "Connecting daily operations to the firm's long-term strategy and priorities.",
     subsections: [
       {
         id: 'strategic-rating',
         title: 'Self-Rating: Strategic Clarity (1–5)',
         questions: [
-          { id: 'sc_rating', label: "On a scale of 1–5, how clearly do you understand and operate in alignment with the firm's strategic goals?", type: 'rating' },
+          { id: 'sc_rating', label: "On a scale of 1–5, how clearly do you understand and operate in alignment with the firm's strategic goals? Score:", type: 'rating' },
         ]
       },
       {
         id: 'strategic-evidence',
         title: 'Evidence of Strategic Clarity',
         questions: [
-          { id: 'sc_evidence', label: "Provide 2–3 examples where you translated a firm-level objective into a concrete operational initiative, or declined work because it did not align with strategic priorities. For each, describe how the project advanced strategy.", type: 'textarea' },
+          { id: 'sc_evidence', label: "Provide 2–3 examples where you: translated a firm-level objective (growth, client experience, risk reduction, margin) into a concrete operational initiative, or declined or de-prioritized work because it did not align with strategic priorities. For each, describe how your decision or project advanced the firm's strategy.", type: 'textarea' },
         ]
       },
       {
@@ -395,104 +366,67 @@ const SECTIONS = [
   }
 ];
 
-// --- Components ---
+const ICON_MAP = {
+  FileText, Clock, ShieldCheck, BarChart3, Zap, Users, Lightbulb, Target
+};
 
-const RatingInput = ({ value, onChange }) => (
-  <div className="mt-1">
-    <div className="flex gap-1.5">
-      {[1, 2, 3, 4, 5].map((num) => (
-        <button
-          key={num}
-          onClick={() => onChange(num)}
-          className={`flex-1 py-2 rounded text-xs font-medium transition-all border
-            ${value === num
-              ? 'bg-stone-800 border-stone-800 text-white'
-              : 'bg-white border-stone-200 text-stone-500 hover:border-stone-300 hover:text-stone-700'}`}
-        >
-          {num}
-        </button>
-      ))}
-    </div>
-    <div className="flex justify-between mt-1.5 px-0.5">
-      {RATING_LABELS.map((label, i) => (
-        <span key={label} className={`text-2xs ${value === i + 1 ? 'text-stone-800 font-medium' : 'text-stone-500'}`}>
-          {label}
-        </span>
-      ))}
-    </div>
-  </div>
-);
-
-const QuestionField = ({ question, value, onChange, onBlur, questionNum }) => {
-  const isFilled = !!value;
-
+const RatingInput = ({ value, onChange }) => {
   return (
-    <div className="question-row px-5 py-3.5 border-b border-stone-100">
-      {/* Label row */}
-      <div className="flex items-start gap-2 mb-1.5">
-        <span className={`text-2xs font-medium mt-px shrink-0 ${isFilled ? 'text-sage-600' : 'text-stone-500'}`}>
-          {questionNum}.
-        </span>
-        <label className="block text-xs text-stone-700 leading-relaxed">
-          {question.label}
-        </label>
+    <div className="mt-2">
+      <div className="flex gap-1 sm:gap-2">
+        {[1, 2, 3, 4, 5].map((num) => (
+          <button
+            key={num}
+            onClick={() => onChange(num)}
+            className={`flex-1 py-3 rounded-lg text-sm font-medium transition-all border
+              ${value === num
+                ? 'bg-navy-800 border-navy-800 text-white shadow-sm'
+                : 'bg-white border-navy-200 text-navy-400 hover:border-navy-400 hover:text-navy-600'}`}
+          >
+            {num}
+          </button>
+        ))}
       </div>
-
-      {/* Input */}
-      <div className="pl-5">
-        {question.type === 'textarea' && (
-          <textarea
-            value={value || ''}
-            onChange={(e) => onChange(question.id, e.target.value)}
-            onBlur={onBlur}
-            rows={3}
-            placeholder="Type your response..."
-            className="w-full px-2.5 py-2 border border-stone-200 rounded text-xs leading-relaxed focus:border-stone-400 transition-all outline-none placeholder:text-stone-300"
-          />
-        )}
-
-        {question.type === 'text' && (
-          <div className="relative">
-            <div className="absolute inset-y-0 left-0 pl-2.5 flex items-center pointer-events-none text-stone-400">
-              <Link2 className="w-3 h-3" />
-            </div>
-            <input
-              type="text"
-              value={value || ''}
-              onChange={(e) => onChange(question.id, e.target.value)}
-              onBlur={onBlur}
-              placeholder="Paste link or reference..."
-              className="w-full pl-7 pr-3 py-2 border border-stone-200 rounded text-xs focus:border-stone-400 transition-all outline-none placeholder:text-stone-300"
-            />
-          </div>
-        )}
-
-        {question.type === 'rating' && (
-          <RatingInput value={value} onChange={(val) => { onChange(question.id, val); onBlur(); }} />
-        )}
+      <div className="flex justify-between mt-2 px-1">
+        {RATING_LABELS.map((label, i) => (
+          <span key={label} className={`text-[10px] font-medium ${value === i + 1 ? 'text-navy-800' : 'text-navy-300'}`}>
+            {label}
+          </span>
+        ))}
       </div>
     </div>
   );
 };
 
-// --- App ---
-
 export default function App() {
-  const initialDraft = readLocalDraft();
-  const importFileRef = useRef(null);
   const [user, setUser] = useState(null);
   const [activeSection, setActiveSection] = useState(0);
-  const [showIntro, setShowIntro] = useState(() => {
-    if (typeof window === 'undefined') return true;
-    return window.localStorage.getItem('assessmentIntroDismissed') !== 'true';
-  });
-  const [responses, setResponses] = useState(initialDraft?.responses || {});
+  const [responses, setResponses] = useState({});
   const [saving, setSaving] = useState(false);
-  const [lastSaved, setLastSaved] = useState(initialDraft?.savedAt ? new Date(initialDraft.savedAt) : null);
-  const [isLoaded, setIsLoaded] = useState(true);
-  const [saveStatus, setSaveStatus] = useState(initialDraft?.savedAt ? 'local' : null);
+  const [submitting, setSubmitting] = useState(false);
+  const [reviewMode, setReviewMode] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    return new URLSearchParams(window.location.search).get('review') === '1';
+  });
+  const [reviewLoading, setReviewLoading] = useState(false);
+  const [reviewError, setReviewError] = useState('');
+  const [reviewSubmissions, setReviewSubmissions] = useState([]);
+  const [selectedSubmissionId, setSelectedSubmissionId] = useState('');
+  const [lastSaved, setLastSaved] = useState(null);
+  const [isLoaded, setIsLoaded] = useState(false);
 
-  // Auth
+  const isAnswered = (value) => {
+    if (typeof value === 'string') {
+      return value.trim().length > 0;
+    }
+
+    if (typeof value === 'number') {
+      return value > 0;
+    }
+
+    return !!value;
+  };
+
   useEffect(() => {
     const initAuth = async () => {
       try {
@@ -506,24 +440,23 @@ export default function App() {
         setIsLoaded(true);
       }
     };
+
     initAuth();
+
     const unsubscribe = onAuthStateChanged(auth, setUser);
     return () => unsubscribe();
   }, []);
 
-  // Firestore sync
   useEffect(() => {
     if (!user) return;
+
     const docRef = doc(db, 'artifacts', appId, 'users', user.uid, 'submissions', 'main');
+
     const unsubscribe = onSnapshot(docRef,
       (docSnap) => {
         if (docSnap.exists()) {
-          const remoteResponses = docSnap.data().responses || {};
-          const remoteSavedAt = docSnap.data().updatedAt?.toDate() || null;
-          setResponses(remoteResponses);
-          setLastSaved(remoteSavedAt);
-          setSaveStatus('cloud');
-          writeLocalDraft(remoteResponses, remoteSavedAt ? remoteSavedAt.toISOString() : new Date().toISOString());
+          setResponses(docSnap.data().responses || {});
+          setLastSaved(docSnap.data().updatedAt?.toDate() || null);
         }
         setIsLoaded(true);
       },
@@ -532,449 +465,623 @@ export default function App() {
         setIsLoaded(true);
       }
     );
+
     return () => unsubscribe();
   }, [user]);
 
-  // Save
-  const saveProgress = useCallback(async (newResponses) => {
-    const data = newResponses || responses;
-    const now = new Date();
-    writeLocalDraft(data, now.toISOString());
-    setLastSaved(now);
-    setSaveStatus('local');
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const url = new URL(window.location.href);
+    if (reviewMode) {
+      url.searchParams.set('review', '1');
+    } else {
+      url.searchParams.delete('review');
+    }
+    window.history.replaceState({}, '', url);
+  }, [reviewMode]);
 
+  const saveProgress = async (newResponses = responses) => {
     if (!user) return;
-
     setSaving(true);
     try {
       const docRef = doc(db, 'artifacts', appId, 'users', user.uid, 'submissions', 'main');
       await setDoc(docRef, {
-        responses: data,
+        responses: newResponses,
         updatedAt: new Date(),
         userId: user.uid,
         status: 'in-progress'
       }, { merge: true });
-      setSaveStatus('cloud');
+      setLastSaved(new Date());
     } catch (err) {
       console.error("Save error:", err);
-      setSaveStatus('local');
     } finally {
       setSaving(false);
-    }
-  }, [user, responses]);
-
-  const exportProgressAsJson = () => {
-    try {
-      const payload = {
-        version: 1,
-        appId,
-        exportedAt: new Date().toISOString(),
-        lastSaved: lastSaved ? lastSaved.toISOString() : null,
-        responses,
-      };
-
-      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const anchor = document.createElement('a');
-      const stamp = new Date().toISOString().slice(0, 10);
-      anchor.href = url;
-      anchor.download = `ops-assessment-progress-${stamp}.json`;
-      document.body.appendChild(anchor);
-      anchor.click();
-      document.body.removeChild(anchor);
-      URL.revokeObjectURL(url);
-    } catch (err) {
-      console.error('Export JSON error:', err);
-      alert('Could not export progress. Please try again.');
-    }
-  };
-
-  const importProgressFromJson = async (event) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    try {
-      const raw = await file.text();
-      const parsed = JSON.parse(raw);
-      const importedResponses = parsed?.responses;
-
-      if (!importedResponses || typeof importedResponses !== 'object' || Array.isArray(importedResponses)) {
-        throw new Error('Invalid progress file format');
-      }
-
-      const parsedLastSaved = parsed?.lastSaved ? new Date(parsed.lastSaved) : new Date();
-      const safeLastSaved = Number.isNaN(parsedLastSaved.getTime()) ? new Date() : parsedLastSaved;
-
-      setResponses(importedResponses);
-      setLastSaved(safeLastSaved);
-      writeLocalDraft(importedResponses, safeLastSaved.toISOString());
-      setSaveStatus('local');
-
-      await saveProgress(importedResponses);
-      alert('Progress loaded successfully.');
-    } catch (err) {
-      console.error('Import JSON error:', err);
-      alert('Could not load this file. Please use a valid exported progress JSON file.');
-    } finally {
-      event.target.value = '';
     }
   };
 
   const updateResponse = (id, value) => {
-    setResponses(prev => {
-      const next = { ...prev, [id]: value };
-      writeLocalDraft(next);
-      return next;
-    });
+    const updated = { ...responses, [id]: value };
+    setResponses(updated);
   };
 
-  const handleBlur = () => {
-    saveProgress();
-  };
-
-  // Progress calculations
   const sectionProgress = useMemo(() => {
     return SECTIONS.map(section => {
       const total = section.subsections.reduce((acc, sub) => acc + sub.questions.length, 0);
       const completed = section.subsections.reduce((acc, sub) => {
-        return acc + sub.questions.filter(q => !!responses[q.id]).length;
+        return acc + sub.questions.filter((q) => isAnswered(responses[q.id])).length;
       }, 0);
-      return { total, completed, percent: total > 0 ? Math.round((completed / total) * 100) : 0 };
+      return { total, completed, percent: Math.round((completed / total) * 100) };
     });
-  }, [responses]);
-
-  const subsectionProgress = useCallback((subsection) => {
-    const total = subsection.questions.length;
-    const completed = subsection.questions.filter(q => !!responses[q.id]).length;
-    return { total, completed };
   }, [responses]);
 
   const globalProgress = useMemo(() => {
     const total = SECTIONS.reduce((acc, s) => {
       return acc + s.subsections.reduce((subAcc, sub) => subAcc + sub.questions.length, 0);
     }, 0);
-    const completed = Object.values(responses).filter(v => !!v).length;
-    return { total, completed, percent: total > 0 ? Math.round((completed / total) * 100) : 0 };
+    const completed = Object.values(responses).filter((v) => isAnswered(v)).length;
+    return { total, completed, percent: Math.round((completed / total) * 100) };
   }, [responses]);
 
-  // Loading state
+  const questionMetaById = useMemo(() => {
+    const map = {};
+    SECTIONS.forEach((section) => {
+      section.subsections.forEach((subsection) => {
+        subsection.questions.forEach((question) => {
+          map[question.id] = {
+            sectionId: section.id,
+            sectionTitle: section.title,
+            subsectionId: subsection.id,
+            subsectionTitle: subsection.title,
+            questionId: question.id,
+            questionLabel: question.label,
+            questionType: question.type
+          };
+        });
+      });
+    });
+    return map;
+  }, []);
+
+  const loadReviewSubmissions = async () => {
+    if (!user) return;
+
+    setReviewLoading(true);
+    setReviewError('');
+
+    try {
+      const completedCollectionRef = collection(db, 'artifacts', appId, 'completedAssessments');
+      const submissionsQuery = query(completedCollectionRef, orderBy('submittedAt', 'desc'), limit(50));
+      const snapshot = await getDocs(submissionsQuery);
+
+      const items = snapshot.docs.map((submissionDoc) => {
+        const data = submissionDoc.data();
+        const submittedAtDate = data.submittedAt?.toDate
+          ? data.submittedAt.toDate()
+          : data.submittedAtClient?.toDate
+            ? data.submittedAtClient.toDate()
+            : data.submittedAtClient
+              ? new Date(data.submittedAtClient)
+              : null;
+
+        return {
+          ...data,
+          docId: submissionDoc.id,
+          submittedAtDate
+        };
+      });
+
+      setReviewSubmissions(items);
+
+      if (!selectedSubmissionId && items.length > 0) {
+        setSelectedSubmissionId(items[0].docId);
+      }
+
+      if (selectedSubmissionId && items.every((item) => item.docId !== selectedSubmissionId)) {
+        setSelectedSubmissionId(items[0]?.docId || '');
+      }
+    } catch (error) {
+      console.error('Review load error:', error);
+      setReviewError('Unable to load completed assessments.');
+    } finally {
+      setReviewLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!user || !reviewMode) return;
+    loadReviewSubmissions();
+  }, [user, reviewMode]);
+
+  const selectedSubmission = useMemo(() => {
+    return reviewSubmissions.find((submission) => submission.docId === selectedSubmissionId) || null;
+  }, [reviewSubmissions, selectedSubmissionId]);
+
+  const selectedSubmissionSections = useMemo(() => {
+    if (!selectedSubmission?.responses) {
+      return [];
+    }
+
+    return SECTIONS.map((section) => ({
+      ...section,
+      subsections: section.subsections.map((subsection) => ({
+        ...subsection,
+        questions: subsection.questions.map((question) => ({
+          ...question,
+          answer: selectedSubmission.responses[question.id]
+        }))
+      }))
+    }));
+  }, [selectedSubmission]);
+
+  const submitAssessment = async () => {
+    if (!user || submitting) return;
+
+    if (globalProgress.completed < globalProgress.total) {
+      alert('Please complete all assessment questions before submitting for review.');
+      return;
+    }
+
+    setSubmitting(true);
+
+    try {
+      const submissionId = `${user.uid}_${Date.now()}`;
+      const now = new Date();
+
+      const completedCollectionRef = collection(db, 'artifacts', appId, 'completedAssessments');
+      await addDoc(completedCollectionRef, {
+        submissionId,
+        userId: user.uid,
+        appId,
+        status: 'submitted',
+        responses,
+        totals: {
+          questions: globalProgress.total,
+          answered: globalProgress.completed,
+          completionPercent: globalProgress.percent
+        },
+        sectionProgress: SECTIONS.map((section, idx) => ({
+          sectionId: section.id,
+          sectionTitle: section.title,
+          completed: sectionProgress[idx]?.completed ?? 0,
+          total: sectionProgress[idx]?.total ?? 0,
+          percent: sectionProgress[idx]?.percent ?? 0
+        })),
+        submittedAt: serverTimestamp(),
+        submittedAtClient: now,
+        updatedAt: serverTimestamp()
+      });
+
+      const draftRef = doc(db, 'artifacts', appId, 'users', user.uid, 'submissions', 'main');
+      await setDoc(draftRef, {
+        responses,
+        updatedAt: serverTimestamp(),
+        userId: user.uid,
+        status: 'submitted',
+        submittedAt: serverTimestamp(),
+        submittedAtClient: now,
+        latestSubmissionId: submissionId
+      }, { merge: true });
+
+      setLastSaved(now);
+      alert('Assessment submitted successfully for review and analysis.');
+    } catch (err) {
+      console.error('Submission error:', err);
+      alert('Unable to submit assessment. Please try again.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   if (!isLoaded) {
     return (
-      <div className="h-screen w-full flex flex-col items-center justify-center bg-white">
-        <Loader2 className="w-5 h-5 animate-spin mb-3 text-stone-400" />
-        <p className="text-xs text-stone-400">Loading assessment...</p>
+      <div className="h-screen w-full flex flex-col items-center justify-center bg-navy-50">
+        <Loader2 className="w-8 h-8 animate-spin mb-4 text-navy-600" />
+        <p className="text-sm font-medium text-navy-600">Loading your assessment...</p>
       </div>
     );
   }
 
   const currentSection = SECTIONS[activeSection];
+  const SectionIcon = ICON_MAP[currentSection.icon];
   const progress = sectionProgress[activeSection];
 
-  if (showIntro) {
+  if (reviewMode) {
     return (
-      <div className="min-h-screen bg-stone-50 font-sans text-stone-900 flex items-center justify-center px-6 py-10">
-        <div className="w-full max-w-3xl bg-white border border-stone-200 rounded-xl shadow-sm overflow-hidden">
-          <div className="px-8 py-6 border-b border-stone-200 flex items-center gap-3">
-            <img src={awmLogo} alt="Able Wealth Management" className="h-7 w-auto object-contain" />
+      <div className="min-h-screen bg-navy-50 font-sans text-navy-900">
+        <header className="sticky top-0 z-10 bg-navy-50/95 backdrop-blur-sm border-b border-navy-200/60">
+          <div className="max-w-7xl mx-auto px-5 md:px-8 py-3 flex items-center justify-between">
             <div>
-              <p className="text-2xs uppercase tracking-wide text-stone-500">Operations Assessment</p>
-              <h1 className="text-lg font-semibold text-stone-900">6-Month Self-Assessment Overview</h1>
+              <h1 className="text-sm md:text-base font-semibold text-navy-900">Assessment Reviewer</h1>
+              <p className="text-[11px] text-navy-500">Completed submissions for review and analysis</p>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={loadReviewSubmissions}
+                disabled={reviewLoading}
+                className="flex items-center gap-1.5 text-[12px] font-medium px-3 py-1.5 rounded-md bg-white border border-navy-200 text-navy-700 hover:bg-navy-100 disabled:opacity-40 transition-colors shadow-sm"
+              >
+                {reviewLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+                Refresh
+              </button>
+              <button
+                onClick={() => setReviewMode(false)}
+                className="flex items-center gap-1.5 text-[12px] font-medium px-3 py-1.5 rounded-md bg-navy-800 border border-navy-800 text-white hover:bg-navy-900 transition-colors shadow-sm"
+              >
+                Back to Assessment
+              </button>
             </div>
           </div>
+        </header>
 
-          <div className="px-8 py-7">
-            <p className="text-sm text-stone-700 leading-relaxed">
-              This self-assessment is designed to clarify what the Director of Operations role means at our firm and to define the next 90 days in a concrete, measurable way.
-            </p>
-
-            <p className="mt-4 text-sm text-stone-700 leading-relaxed">
-              The focus is not on writing a narrative or listing completed tasks. Instead, this review is about demonstrating progress toward building and running a true operating system — one with:
-            </p>
-
-            <ul className="mt-3 space-y-1.5 text-sm text-stone-700 leading-relaxed list-disc pl-5">
-              <li>Clear, documented priorities</li>
-              <li>Defined and repeatable workflows</li>
-              <li>Embedded controls and checkpoints</li>
-              <li>Visible dashboards and reporting</li>
-              <li>Clear decision thresholds</li>
-              <li>Reduced errors and reduced routine Partner involvement</li>
-            </ul>
-
-            <p className="mt-4 text-sm text-stone-700 leading-relaxed">
-              Please respond directly and concisely. Where possible, link to supporting documentation, dashboards, workflows, reports, or other evidence.
-            </p>
-
-            <p className="mt-4 text-sm text-stone-700 leading-relaxed">
-              If something is not yet built, state that clearly and outline:
-            </p>
-
-            <ul className="mt-3 space-y-1.5 text-sm text-stone-700 leading-relaxed list-disc pl-5">
-              <li>The specific plan to complete it</li>
-              <li>The responsible owner</li>
-              <li>The target completion date</li>
-              <li>The first action step you will complete within the next 7 days</li>
-            </ul>
-
-            <p className="mt-4 text-sm text-stone-700 leading-relaxed">
-              Note: Saved progress is stored locally on the same device and browser profile. Your work will remain available across days if you use the same browser profile and do not clear site data. Progress may be lost if you clear your browser cache or site data, use private/incognito mode, or switch browsers or devices. To prevent loss, we recommend backing up your work by clicking Export JSON and saving the file. You can later restore your progress by selecting Import JSON and uploading that file.
-            </p>
-
-            <div className="mt-7 flex flex-wrap gap-2 justify-end">
-              <button
-                onClick={exportProgressAsJson}
-                className="flex items-center gap-1 text-2xs font-medium px-3 py-2 rounded border border-stone-200 text-stone-600 hover:bg-stone-50 transition-colors"
-              >
-                <Download className="w-3 h-3" />
-                Export JSON
-              </button>
-              <button
-                onClick={() => importFileRef.current?.click()}
-                className="flex items-center gap-1 text-2xs font-medium px-3 py-2 rounded border border-stone-200 text-stone-600 hover:bg-stone-50 transition-colors"
-              >
-                <Upload className="w-3 h-3" />
-                Import JSON
-              </button>
-              <button
-                onClick={() => {
-                  window.localStorage.setItem('assessmentIntroDismissed', 'true');
-                  setShowIntro(false);
-                  window.scrollTo(0, 0);
-                }}
-                className="flex items-center gap-1.5 px-4 py-2 rounded text-xs font-medium bg-stone-900 text-white hover:bg-stone-800 transition-colors"
-              >
-                Begin Assessment
-                <ChevronRight className="w-3.5 h-3.5" />
-              </button>
-              <input
-                ref={importFileRef}
-                type="file"
-                accept="application/json,.json"
-                onChange={importProgressFromJson}
-                className="hidden"
-              />
+        <div className="max-w-7xl mx-auto px-5 md:px-8 py-6 grid grid-cols-1 lg:grid-cols-[340px,1fr] gap-6">
+          <aside className="bg-white border border-navy-100 rounded-xl shadow-sm overflow-hidden h-fit">
+            <div className="px-4 py-3 border-b border-navy-100">
+              <p className="text-xs font-semibold text-navy-800">Submissions</p>
+              <p className="text-[11px] text-navy-400">Latest 50 records</p>
             </div>
-          </div>
+            <div className="max-h-[70vh] overflow-y-auto p-2 space-y-2">
+              {reviewError && (
+                <div className="px-3 py-2 rounded-md bg-red-50 border border-red-200 text-[12px] text-red-700">
+                  {reviewError}
+                </div>
+              )}
+
+              {!reviewLoading && reviewSubmissions.length === 0 && !reviewError && (
+                <div className="px-3 py-2 rounded-md bg-navy-50 border border-navy-100 text-[12px] text-navy-500">
+                  No completed assessments found.
+                </div>
+              )}
+
+              {reviewSubmissions.map((submission) => {
+                const isActive = submission.docId === selectedSubmissionId;
+                return (
+                  <button
+                    key={submission.docId}
+                    onClick={() => setSelectedSubmissionId(submission.docId)}
+                    className={`w-full text-left px-3 py-2.5 rounded-lg border transition-colors
+                      ${isActive
+                        ? 'bg-navy-800 border-navy-800 text-white'
+                        : 'bg-white border-navy-100 text-navy-800 hover:bg-navy-50'
+                      }`}
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <span className={`text-[11px] font-medium truncate ${isActive ? 'text-navy-100' : 'text-navy-500'}`}>
+                        {submission.userId || 'Unknown user'}
+                      </span>
+                      <span className={`text-[10px] font-semibold ${isActive ? 'text-teal-300' : 'text-teal-700'}`}>
+                        {submission.totals?.completionPercent ?? 0}%
+                      </span>
+                    </div>
+                    <p className={`mt-1 text-[11px] ${isActive ? 'text-navy-300' : 'text-navy-400'}`}>
+                      {submission.submittedAtDate ? submission.submittedAtDate.toLocaleString() : 'No timestamp'}
+                    </p>
+                  </button>
+                );
+              })}
+            </div>
+          </aside>
+
+          <main className="bg-white border border-navy-100 rounded-xl shadow-sm overflow-hidden">
+            {!selectedSubmission ? (
+              <div className="p-8 text-center text-navy-500 text-sm">
+                Select a submission to review.
+              </div>
+            ) : (
+              <div>
+                <div className="px-6 py-4 border-b border-navy-100">
+                  <h2 className="text-base font-semibold text-navy-900">Submission Details</h2>
+                  <div className="mt-2 grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <div className="bg-navy-50 border border-navy-100 rounded-lg px-3 py-2">
+                      <p className="text-[10px] uppercase tracking-wide text-navy-400">User</p>
+                      <p className="text-[12px] font-medium text-navy-800 break-all">{selectedSubmission.userId || 'Unknown'}</p>
+                    </div>
+                    <div className="bg-navy-50 border border-navy-100 rounded-lg px-3 py-2">
+                      <p className="text-[10px] uppercase tracking-wide text-navy-400">Submitted</p>
+                      <p className="text-[12px] font-medium text-navy-800">{selectedSubmission.submittedAtDate ? selectedSubmission.submittedAtDate.toLocaleString() : 'No timestamp'}</p>
+                    </div>
+                    <div className="bg-navy-50 border border-navy-100 rounded-lg px-3 py-2">
+                      <p className="text-[10px] uppercase tracking-wide text-navy-400">Completion</p>
+                      <p className="text-[12px] font-medium text-navy-800">{selectedSubmission.totals?.answered ?? 0} / {selectedSubmission.totals?.questions ?? 0}</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="p-6 space-y-6 max-h-[70vh] overflow-y-auto">
+                  {selectedSubmissionSections.map((section) => (
+                    <section key={section.id} className="space-y-3">
+                      <h3 className="text-sm font-semibold text-navy-900">{section.title}</h3>
+                      {section.subsections.map((subsection) => (
+                        <div key={subsection.id} className="border border-navy-100 rounded-lg overflow-hidden">
+                          <div className="px-4 py-2.5 bg-navy-50 border-b border-navy-100">
+                            <p className="text-[12px] font-medium text-navy-700">{subsection.title}</p>
+                          </div>
+                          <div className="divide-y divide-navy-100">
+                            {subsection.questions.map((question) => {
+                              const value = selectedSubmission.responses?.[question.id];
+                              const hasValue = isAnswered(value);
+                              const meta = questionMetaById[question.id];
+
+                              return (
+                                <div key={question.id} className="px-4 py-3">
+                                  <p className="text-[12px] font-medium text-navy-800">{question.label}</p>
+                                  <p className="mt-2 text-[12px] leading-relaxed text-navy-600 whitespace-pre-wrap">
+                                    {hasValue ? String(value) : 'No response provided.'}
+                                  </p>
+                                  {meta && (
+                                    <p className="mt-1 text-[10px] text-navy-400">{meta.sectionTitle} • {meta.subsectionTitle}</p>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      ))}
+                    </section>
+                  ))}
+                </div>
+              </div>
+            )}
+          </main>
         </div>
       </div>
     );
   }
 
-  // Running question counter across subsections
-  let questionCounter = 0;
-
   return (
-    <div className="min-h-screen bg-white font-sans text-stone-900 flex flex-col md:flex-row">
-
-      {/* ── Sidebar ── */}
-      <aside className="w-full md:w-52 lg:w-56 bg-white border-r border-stone-200 flex flex-col h-auto md:h-screen md:sticky md:top-0 shrink-0">
-
-        {/* Logo */}
-        <div className="h-12 flex items-center px-4 border-b border-stone-200 shrink-0">
-          <img src={awmLogo} alt="Able Wealth Management" className="h-6 w-auto object-contain" />
+    <div className="min-h-screen bg-navy-50 font-sans text-navy-900 flex flex-col md:flex-row">
+      {/* Sidebar */}
+      <aside className="w-full md:w-72 lg:w-80 bg-navy-900 text-white flex flex-col h-auto md:h-screen md:sticky md:top-0 shrink-0">
+        <div className="px-5 pt-6 pb-5 border-b border-navy-800">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-lg bg-navy-700 flex items-center justify-center">
+              <ClipboardCheck className="w-5 h-5 text-teal-400" />
+            </div>
+            <div>
+              <h1 className="font-bold text-sm tracking-tight">Able Wealth Management</h1>
+              <p className="text-[11px] text-navy-400">Operations Self-Assessment</p>
+            </div>
+          </div>
         </div>
 
-        {/* Navigation */}
-        <nav className="flex-1 overflow-y-auto py-3">
+        <nav className="flex-1 overflow-y-auto py-2 px-2">
           {SECTIONS.map((section, idx) => {
             const isActive = activeSection === idx;
             const prog = sectionProgress[idx];
             const isDone = prog.percent === 100;
+            const Icon = ICON_MAP[section.icon];
             return (
               <button
                 key={section.id}
                 onClick={() => { setActiveSection(idx); window.scrollTo(0, 0); }}
-                className={`nav-item w-full text-left block px-5 py-[7px] text-[13px]
+                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-all group mb-0.5
                   ${isActive
-                    ? 'nav-item-active text-stone-900 font-semibold'
-                    : 'text-stone-600 hover:text-stone-900 hover:bg-stone-50'
+                    ? 'bg-navy-800 text-white'
+                    : 'text-navy-300 hover:bg-navy-800/50 hover:text-white'
                   }`}
               >
-                <span className="text-2xs text-stone-500 mr-1.5">{idx + 1}.</span>
-                {section.title}
-                {isDone && <CheckCircle className="inline-block w-3 h-3 text-sage-500 ml-1 -mt-0.5" />}
+                <div className={`w-7 h-7 rounded-md flex items-center justify-center shrink-0
+                  ${isActive ? 'bg-teal-500/20 text-teal-400' : isDone ? 'bg-emerald-500/15 text-emerald-400' : 'bg-navy-700/50 text-navy-400'}`}>
+                  {isDone ? <CheckCircle className="w-4 h-4" /> : <Icon className="w-4 h-4" />}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className={`text-[13px] truncate ${isActive ? 'font-semibold' : 'font-medium'}`}>
+                    {section.title}
+                  </p>
+                  <p className={`text-[10px] mt-0.5 ${isDone ? 'text-emerald-400' : 'text-navy-500'}`}>
+                    {prog.completed} of {prog.total} complete
+                  </p>
+                </div>
               </button>
             );
           })}
         </nav>
 
-        {/* Progress bar */}
-        <div className="px-4 py-3 border-t border-stone-200 shrink-0">
-          <div className="flex justify-between text-2xs text-stone-500 mb-1">
-            <span>{globalProgress.completed} of {globalProgress.total}</span>
-            <span className="font-medium text-stone-600">{globalProgress.percent}%</span>
+        <div className="px-4 py-4 border-t border-navy-800">
+          <div className="flex justify-between text-[11px] font-medium text-navy-400 mb-2">
+            <span>Overall Progress</span>
+            <span className="text-white">{globalProgress.completed} / {globalProgress.total}</span>
           </div>
-          <div className="w-full bg-stone-100 h-1 rounded-full overflow-hidden">
-            <div className="h-full bg-stone-800 rounded-full transition-all duration-500" style={{ width: `${globalProgress.percent}%` }} />
+          <div className="w-full bg-navy-800 h-1.5 rounded-full overflow-hidden">
+            <div
+              className="h-full bg-teal-500 rounded-full transition-all duration-500"
+              style={{ width: `${globalProgress.percent}%` }}
+            />
           </div>
+          <p className="text-[10px] text-navy-500 mt-2">{globalProgress.percent}% complete</p>
         </div>
       </aside>
 
-      {/* ── Main ── */}
-      <main className="flex-1 flex flex-col min-h-screen">
-
-        {/* Header */}
-        <div className="sticky top-0 z-10 bg-white border-b border-stone-200 shrink-0">
-          <div className="px-8 py-2 flex items-center justify-between">
-            <div className="flex items-center gap-1.5 text-2xs text-stone-500">
-              <span>Assessment</span>
-              <ChevronRight className="w-3 h-3" />
-              <span className="text-stone-700">{currentSection.title}</span>
+      {/* Main */}
+      <main className="flex-1 overflow-y-auto">
+        {/* Top bar */}
+        <div className="sticky top-0 z-10 bg-navy-50/95 backdrop-blur-sm border-b border-navy-200/60">
+          <div className="max-w-3xl mx-auto px-5 md:px-10 py-3 flex items-center justify-between">
+            <div className="flex items-center gap-2 text-[12px] text-navy-500">
+              <span className="font-medium">Section {activeSection + 1}</span>
+              <span className="text-navy-300">/</span>
+              <span>{SECTIONS.length}</span>
+              <span className="mx-2 text-navy-200">|</span>
+              <span className="text-navy-400">{progress.completed} of {progress.total} answered</span>
             </div>
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-3">
               <button
-                onClick={() => {
-                  window.localStorage.removeItem('assessmentIntroDismissed');
-                  setShowIntro(true);
-                  window.scrollTo(0, 0);
-                }}
-                className="text-2xs font-medium px-2.5 py-1.5 rounded border border-stone-200 text-stone-600 hover:bg-stone-50 transition-colors"
+                onClick={() => setReviewMode(true)}
+                className="flex items-center gap-1.5 text-[12px] font-medium px-3 py-1.5 rounded-md bg-white border border-navy-200 text-navy-700 hover:bg-navy-100 transition-colors shadow-sm"
               >
-                Overview
+                Review Submissions
               </button>
               {lastSaved && (
-                <span className="text-2xs text-stone-500 hidden sm:block mr-1">
-                  Saved {lastSaved.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                <span className="text-[11px] text-navy-400 hidden sm:block">
+                  Saved {lastSaved.toLocaleTimeString()}
                 </span>
               )}
-              {saveStatus && (
-                <span className="text-2xs text-stone-500 hidden sm:block mr-1">
-                  {saveStatus === 'cloud' ? 'Synced to cloud' : 'Saved locally'}
-                </span>
-              )}
-              <button
-                onClick={() => { if (activeSection > 0) { setActiveSection(activeSection - 1); window.scrollTo(0, 0); } }}
-                disabled={activeSection === 0}
-                className="flex items-center gap-0.5 text-2xs font-medium px-2.5 py-1.5 rounded border border-stone-200 text-stone-600 hover:bg-stone-50 disabled:opacity-25 transition-colors"
-              >
-                <ChevronLeft className="w-3 h-3" /> Prev
-              </button>
-              <button
-                onClick={() => { saveProgress(); if (activeSection < SECTIONS.length - 1) { setActiveSection(activeSection + 1); window.scrollTo(0, 0); } }}
-                disabled={activeSection === SECTIONS.length - 1}
-                className="flex items-center gap-0.5 text-2xs font-medium px-2.5 py-1.5 rounded border border-stone-200 text-stone-600 hover:bg-stone-50 disabled:opacity-25 transition-colors"
-              >
-                Next <ChevronRight className="w-3 h-3" />
-              </button>
               <button
                 onClick={() => saveProgress()}
                 disabled={saving}
-                className="flex items-center gap-1 text-2xs font-medium px-2.5 py-1.5 rounded bg-stone-900 text-white hover:bg-stone-800 disabled:opacity-40 transition-colors"
+                className="flex items-center gap-1.5 text-[12px] font-medium px-3 py-1.5 rounded-md bg-white border border-navy-200 text-navy-700 hover:bg-navy-100 disabled:opacity-40 transition-colors shadow-sm"
               >
-                {saving ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />}
-                Save
+                {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+                Save Progress
               </button>
-              <button
-                onClick={exportProgressAsJson}
-                className="flex items-center gap-1 text-2xs font-medium px-2.5 py-1.5 rounded border border-stone-200 text-stone-600 hover:bg-stone-50 transition-colors"
-              >
-                <Download className="w-3 h-3" />
-                Export JSON
-              </button>
-              <button
-                onClick={() => importFileRef.current?.click()}
-                className="flex items-center gap-1 text-2xs font-medium px-2.5 py-1.5 rounded border border-stone-200 text-stone-600 hover:bg-stone-50 transition-colors"
-              >
-                <Upload className="w-3 h-3" />
-                Import JSON
-              </button>
-              <input
-                ref={importFileRef}
-                type="file"
-                accept="application/json,.json"
-                onChange={importProgressFromJson}
-                className="hidden"
-              />
             </div>
-          </div>
-          <div className="px-8 pb-2.5 flex items-baseline justify-between">
-            <h1 className="text-base font-semibold text-stone-900">{currentSection.title}</h1>
-            <span className="text-2xs text-stone-500">{progress.completed}/{progress.total} answered</span>
           </div>
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto bg-stone-50">
-          <div className="max-w-4xl px-8 py-5">
-            <p className="text-xs text-stone-600 mb-5 leading-relaxed">{currentSection.description}</p>
+        <div className="max-w-3xl mx-auto px-5 md:px-10 py-8 md:py-12">
+          {/* Section header */}
+          <div className="mb-8">
+            <div className="flex items-start gap-4 mb-4">
+              <div className="w-11 h-11 rounded-xl bg-navy-800 flex items-center justify-center shrink-0">
+                <SectionIcon className="w-5 h-5 text-teal-400" />
+              </div>
+              <div>
+                <h2 className="text-xl md:text-2xl font-bold text-navy-900 leading-tight">
+                  {currentSection.title}
+                </h2>
+                <div className="flex items-center gap-2 mt-1.5">
+                  <div className="w-16 bg-navy-200 h-1 rounded-full overflow-hidden">
+                    <div
+                      className={`h-full rounded-full transition-all duration-500 ${progress.percent === 100 ? 'bg-emerald-500' : 'bg-teal-500'}`}
+                      style={{ width: `${progress.percent}%` }}
+                    />
+                  </div>
+                  <span className="text-[11px] text-navy-400 font-medium">{progress.completed}/{progress.total}</span>
+                </div>
+              </div>
+            </div>
+            <p className="text-sm text-navy-500 leading-relaxed bg-white border border-navy-100 rounded-lg px-4 py-3">
+              {currentSection.description}
+            </p>
+          </div>
 
-            {/* Subsection cards */}
-            <div className="space-y-4">
-              {currentSection.subsections.map((subsection) => {
-                const subProg = subsectionProgress(subsection);
-                return (
-                  <div key={subsection.id} className="bg-white rounded-lg border border-stone-200 overflow-hidden">
+          {/* Questions */}
+          <div className="space-y-8">
+            {currentSection.subsections.map((subsection, subIdx) => {
+              let questionCounter = 0;
+              for (let i = 0; i < subIdx; i++) {
+                questionCounter += currentSection.subsections[i].questions.length;
+              }
 
-                    {/* Subsection header */}
-                    <div className="px-5 py-2.5 border-b border-stone-100">
-                      <div className="flex items-center justify-between">
-                        <h3 className="text-xs font-semibold text-stone-800">
-                          {subsection.title}
-                          <span className="text-stone-500 font-normal ml-1.5">({subsection.questions.length})</span>
-                        </h3>
-                        {subProg.completed > 0 && (
-                          <span className={`text-2xs font-medium ${subProg.completed === subProg.total ? 'text-sage-600' : 'text-stone-500'}`}>
-                            {subProg.completed === subProg.total ? 'Complete' : `${subProg.completed}/${subProg.total}`}
-                          </span>
-                        )}
-                      </div>
-                      {(subsection.definition || subsection.evidence) && (
-                        <div className="mt-2 space-y-1.5">
-                          {subsection.definition && (
-                            <p className="text-2xs text-stone-600 leading-relaxed">
-                              <span className="font-semibold text-stone-700">Definition:</span> {subsection.definition}
-                            </p>
-                          )}
-                          {subsection.evidence && (
-                            <p className="text-2xs text-stone-600 leading-relaxed">
-                              <span className="font-semibold text-stone-700">Evidence:</span> {subsection.evidence}
-                            </p>
+              return (
+                <div key={subsection.id} className="space-y-4">
+                  {/* Subsection Header */}
+                  <div className="flex items-start gap-3">
+                    <span className="text-sm font-bold text-navy-700 tabular-nums shrink-0 mt-0.5">
+                      {subIdx + 1}.
+                    </span>
+                    <h3 className="text-base font-bold text-navy-900 leading-snug">
+                      {subsection.title}
+                    </h3>
+                  </div>
+
+                  {/* Questions in this subsection */}
+                  <div className="space-y-4 ml-6">
+                    {subsection.questions.map((q, qIdx) => {
+                      const globalQIdx = questionCounter + qIdx;
+                      return (
+                        <div key={q.id} className="bg-white rounded-xl border border-navy-100 shadow-sm overflow-hidden">
+                          <div className="px-5 pt-5 pb-4">
+                            <div className="flex items-start gap-3 mb-3">
+                              <label className="block text-[15px] font-medium text-navy-800 leading-snug">
+                                {q.label}
+                              </label>
+                            </div>
+
+                            <div className="ml-0">
+                              {q.type === 'textarea' && (
+                                <textarea
+                                  value={responses[q.id] || ''}
+                                  onChange={(e) => updateResponse(q.id, e.target.value)}
+                                  rows={4}
+                                  placeholder="Type your response here..."
+                                  className="w-full p-3 border border-navy-200 rounded-lg text-sm leading-relaxed focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition-all outline-none resize-none bg-navy-50/30 placeholder:text-navy-300"
+                                />
+                              )}
+
+                              {q.type === 'text' && (
+                                <div className="relative">
+                                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-navy-300">
+                                    <ArrowUpRight className="w-4 h-4" />
+                                  </div>
+                                  <input
+                                    type="text"
+                                    value={responses[q.id] || ''}
+                                    onChange={(e) => updateResponse(q.id, e.target.value)}
+                                    placeholder="Paste a link or type a brief reference..."
+                                    className="w-full pl-10 pr-4 py-2.5 border border-navy-200 rounded-lg text-sm focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition-all outline-none bg-navy-50/30 placeholder:text-navy-300"
+                                  />
+                                </div>
+                              )}
+
+                              {q.type === 'rating' && (
+                                <RatingInput
+                                  value={responses[q.id]}
+                                  onChange={(val) => updateResponse(q.id, val)}
+                                />
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Completion indicator bar */}
+                          {isAnswered(responses[q.id]) && (
+                            <div className="h-0.5 bg-teal-500" />
                           )}
                         </div>
-                      )}
-                    </div>
-
-                    {/* Questions */}
-                    {subsection.questions.map((q) => {
-                      questionCounter++;
-                      return (
-                        <QuestionField
-                          key={q.id}
-                          question={q}
-                          value={responses[q.id]}
-                          onChange={updateResponse}
-                          onBlur={handleBlur}
-                          questionNum={questionCounter}
-                        />
                       );
                     })}
                   </div>
-                );
-              })}
-            </div>
+                </div>
+              );
+            })}
+          </div>
 
-            {/* Bottom action */}
-            <div className="mt-6 flex items-center justify-end pb-6">
-              {activeSection < SECTIONS.length - 1 ? (
-                <button
-                  onClick={() => { saveProgress(); setActiveSection(activeSection + 1); window.scrollTo(0, 0); }}
-                  className="flex items-center gap-1.5 px-4 py-2 rounded text-xs font-medium bg-stone-900 text-white hover:bg-stone-800 transition-colors"
-                >
-                  Continue to Next Section
-                  <ChevronRight className="w-3.5 h-3.5" />
-                </button>
-              ) : (
-                <button
-                  onClick={() => { saveProgress(); alert("Assessment saved for final review."); }}
-                  className="flex items-center gap-1.5 px-4 py-2 rounded text-xs font-medium bg-sage-600 text-white hover:bg-sage-700 transition-colors"
-                >
-                  <CheckCircle className="w-3.5 h-3.5" />
-                  Submit for Review
-                </button>
-              )}
-            </div>
+          {/* Navigation */}
+          <div className="mt-10 flex items-center justify-between pb-12">
+            <button
+              onClick={() => {
+                setActiveSection(Math.max(0, activeSection - 1));
+                window.scrollTo(0, 0);
+              }}
+              disabled={activeSection === 0}
+              className="flex items-center gap-2 text-sm font-medium text-navy-400 hover:text-navy-700 disabled:opacity-0 transition-colors"
+            >
+              <ChevronLeft className="w-4 h-4" />
+              Previous
+            </button>
+
+            {activeSection < SECTIONS.length - 1 ? (
+              <button
+                onClick={() => {
+                  saveProgress();
+                  setActiveSection(activeSection + 1);
+                  window.scrollTo(0, 0);
+                }}
+                className="flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold bg-navy-800 text-white hover:bg-navy-900 transition-colors shadow-sm"
+              >
+                Continue to Next Section
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            ) : (
+              <button
+                onClick={submitAssessment}
+                disabled={submitting || saving}
+                className="flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold bg-teal-600 text-white hover:bg-teal-700 disabled:opacity-40 transition-colors shadow-sm"
+              >
+                {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
+                {submitting ? 'Submitting...' : 'Submit for Review'}
+              </button>
+            )}
           </div>
         </div>
       </main>
+
+      {user && (
+        <div className="fixed bottom-3 right-3 bg-navy-900 text-white text-[10px] px-3 py-1.5 rounded-md flex items-center gap-2 opacity-30 hover:opacity-100 transition-opacity">
+          <div className="w-1.5 h-1.5 bg-emerald-400 rounded-full" />
+          <span className="text-navy-400">Synced</span>
+        </div>
+      )}
     </div>
   );
 }
