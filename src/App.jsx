@@ -35,8 +35,7 @@ import {
   Users,
   Lightbulb,
   Target,
-  CircleDot,
-  ClipboardCheck
+  CircleDot
 } from 'lucide-react';
 
 const firebaseConfig = typeof __firebase_config !== 'undefined'
@@ -728,6 +727,17 @@ export default function App() {
     setShowOverview(true);
   };
 
+  const enterReviewMode = () => {
+    if (typeof window !== 'undefined') {
+      const url = new URL(window.location.href);
+      url.searchParams.set('review', '1');
+      window.history.replaceState({}, '', url);
+      window.scrollTo(0, 0);
+    }
+    setShowOverview(false);
+    setReviewMode(true);
+  };
+
   if (!isLoaded) {
     return (
       <div className="h-screen w-full flex flex-col items-center justify-center bg-navy-50">
@@ -960,7 +970,7 @@ export default function App() {
         <div className="px-5 pt-6 pb-5 border-b border-navy-800">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-lg bg-navy-700 flex items-center justify-center">
-              <ClipboardCheck className="w-5 h-5 text-teal-400" />
+              <img src="/awm-logo.png" alt="Able Wealth logo" className="w-5 h-5 object-contain" />
             </div>
             <div>
               <h1 className="font-bold text-sm tracking-tight">Able Wealth Management</h1>
@@ -1042,7 +1052,7 @@ export default function App() {
               </button>
               {isReviewer && (
                 <button
-                  onClick={() => setReviewMode(true)}
+                  onClick={enterReviewMode}
                   className="flex items-center gap-1.5 text-[12px] font-medium px-3 py-1.5 rounded-md bg-white border border-navy-200 text-navy-700 hover:bg-navy-100 transition-colors shadow-sm"
                 >
                   Review Submissions
