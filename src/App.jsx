@@ -17,7 +17,8 @@ import {
   getAuth,
   signInAnonymously,
   signInWithCustomToken,
-  onAuthStateChanged
+  onAuthStateChanged,
+  getIdTokenResult
 } from 'firebase/auth';
 import {
   Save,
@@ -41,19 +42,21 @@ import {
 const firebaseConfig = typeof __firebase_config !== 'undefined'
   ? JSON.parse(__firebase_config)
   : {
-      apiKey: "YOUR_API_KEY",
-      authDomain: "your-project.firebaseapp.com",
-      projectId: "your-project-id",
-      storageBucket: "your-project.appspot.com",
-      messagingSenderId: "your-sender-id",
-      appId: "your-app-id"
+      apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "YOUR_API_KEY",
+      authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || "your-project.firebaseapp.com",
+      projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || "your-project-id",
+      storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || "your-project.appspot.com",
+      messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "your-sender-id",
+      appId: import.meta.env.VITE_FIREBASE_APP_ID || "your-app-id"
     };
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-const appId = typeof __app_id !== 'undefined' ? __app_id : 'able-wealth-ops-assessment-v1';
+const appId = typeof __app_id !== 'undefined'
+  ? __app_id
+  : (import.meta.env.VITE_APP_ID || 'able-wealth-ops-assessment-v1');
 
 const RATING_LABELS = ['Developing', 'Building', 'Competent', 'Strong', 'Mastery'];
 
@@ -400,6 +403,8 @@ const RatingInput = ({ value, onChange }) => {
 
 export default function App() {
   const [user, setUser] = useState(null);
+  const [isReviewer, setIsReviewer] = useState(false);
+  const [claimsLoaded, setClaimsLoaded] = useState(false);
   const [activeSection, setActiveSection] = useState(0);
   const [responses, setResponses] = useState({});
   const [saving, setSaving] = useState(false);
@@ -414,6 +419,10 @@ export default function App() {
   const [selectedSubmissionId, setSelectedSubmissionId] = useState('');
   const [lastSaved, setLastSaved] = useState(null);
   const [isLoaded, setIsLoaded] = useState(false);
+  const [showOverview, setShowOverview] = useState(() => {
+    if (typeof window === 'undefined') return true;
+    return window.localStorage.getItem('assessmentOverviewDismissed') !== 'true';
+  });
 
   const isAnswered = (value) => {
     if (typeof value === 'string') {
@@ -446,6 +455,29 @@ export default function App() {
     const unsubscribe = onAuthStateChanged(auth, setUser);
     return () => unsubscribe();
   }, []);
+
+  useEffect(() => {
+    const loadClaims = async () => {
+      if (!user) {
+        setIsReviewer(false);
+        setClaimsLoaded(true);
+        return;
+      }
+
+      try {
+        const tokenResult = await getIdTokenResult(user);
+        const claims = tokenResult?.claims || {};
+        setIsReviewer(Boolean(claims.reviewer || claims.admin));
+      } catch (error) {
+        console.error('Reviewer claims load error:', error);
+        setIsReviewer(false);
+      } finally {
+        setClaimsLoaded(true);
+      }
+    };
+
+    loadClaims();
+  }, [user]);
 
   useEffect(() => {
     if (!user) return;
@@ -543,7 +575,7 @@ export default function App() {
   }, []);
 
   const loadReviewSubmissions = async () => {
-    if (!user) return;
+    if (!user || !isReviewer) return;
 
     setReviewLoading(true);
     setReviewError('');
@@ -588,9 +620,16 @@ export default function App() {
   };
 
   useEffect(() => {
-    if (!user || !reviewMode) return;
+    if (!claimsLoaded) return;
+
+    if (reviewMode && !isReviewer) {
+      setReviewError('You do not have access to reviewed submissions.');
+      return;
+    }
+
+    if (!user || !reviewMode || !isReviewer) return;
     loadReviewSubmissions();
-  }, [user, reviewMode]);
+  }, [user, reviewMode, isReviewer, claimsLoaded]);
 
   const selectedSubmission = useMemo(() => {
     return reviewSubmissions.find((submission) => submission.docId === selectedSubmissionId) || null;
@@ -663,6 +702,11 @@ export default function App() {
       }, { merge: true });
 
       setLastSaved(now);
+      if (typeof window !== 'undefined') {
+        window.localStorage.removeItem('assessmentOverviewDismissed');
+        window.scrollTo(0, 0);
+      }
+      setShowOverview(true);
       alert('Assessment submitted successfully for review and analysis.');
     } catch (err) {
       console.error('Submission error:', err);
@@ -670,6 +714,18 @@ export default function App() {
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const returnToAssessmentOverview = () => {
+    if (typeof window !== 'undefined') {
+      const url = new URL(window.location.href);
+      url.searchParams.delete('review');
+      window.history.replaceState({}, '', url);
+      window.localStorage.removeItem('assessmentOverviewDismissed');
+      window.scrollTo(0, 0);
+    }
+    setReviewMode(false);
+    setShowOverview(true);
   };
 
   if (!isLoaded) {
@@ -685,7 +741,77 @@ export default function App() {
   const SectionIcon = ICON_MAP[currentSection.icon];
   const progress = sectionProgress[activeSection];
 
+  if (showOverview && !reviewMode) {
+    return (
+      <div className="min-h-screen bg-navy-50 font-sans text-navy-900 flex items-center justify-center px-6 py-10">
+        <div className="w-full max-w-3xl bg-white border border-navy-200 rounded-xl shadow-sm overflow-hidden">
+          <div className="px-8 py-6 border-b border-navy-200">
+            <p className="text-[11px] uppercase tracking-wide text-navy-500">Operations Assessment</p>
+            <h1 className="text-lg font-semibold text-navy-900 mt-1">6-Month Self-Assessment Overview</h1>
+          </div>
+
+          <div className="px-8 py-7">
+            <p className="text-sm text-navy-700 leading-relaxed">
+              This self-assessment is designed to define where operations are strong today and where systems need improvement over the next 90 days.
+            </p>
+
+            <p className="mt-4 text-sm text-navy-700 leading-relaxed">
+              Focus on clear, direct responses. Link to supporting SOPs, workflows, dashboards, or documentation where relevant.
+            </p>
+
+            <ul className="mt-4 space-y-1.5 text-sm text-navy-700 leading-relaxed list-disc pl-5">
+              <li>Answer each question concisely and specifically</li>
+              <li>Use evidence and links where possible</li>
+              <li>Save progress as you go</li>
+              <li>Submit only when all sections are complete</li>
+            </ul>
+
+            <div className="mt-7 flex justify-end">
+              <button
+                onClick={() => {
+                  window.localStorage.setItem('assessmentOverviewDismissed', 'true');
+                  setShowOverview(false);
+                  window.scrollTo(0, 0);
+                }}
+                className="flex items-center gap-1.5 px-4 py-2 rounded text-xs font-medium bg-navy-900 text-white hover:bg-navy-800 transition-colors"
+              >
+                Begin Assessment
+                <ChevronRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (reviewMode) {
+    if (!claimsLoaded) {
+      return (
+        <div className="h-screen w-full flex flex-col items-center justify-center bg-navy-50">
+          <Loader2 className="w-8 h-8 animate-spin mb-4 text-navy-600" />
+          <p className="text-sm font-medium text-navy-600">Checking reviewer access...</p>
+        </div>
+      );
+    }
+
+    if (!isReviewer) {
+      return (
+        <div className="h-screen w-full flex flex-col items-center justify-center bg-navy-50 px-4">
+          <div className="max-w-md w-full bg-white border border-navy-200 rounded-xl shadow-sm p-6 text-center">
+            <h2 className="text-base font-semibold text-navy-900">Access Restricted</h2>
+            <p className="mt-2 text-sm text-navy-600">You do not have permission to view reviewed submissions.</p>
+            <button
+              onClick={returnToAssessmentOverview}
+              className="mt-4 inline-flex items-center gap-2 px-4 py-2 rounded-md bg-navy-800 text-white text-sm font-medium hover:bg-navy-900 transition-colors"
+            >
+              Back to Assessment
+            </button>
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div className="min-h-screen bg-navy-50 font-sans text-navy-900">
         <header className="sticky top-0 z-10 bg-navy-50/95 backdrop-blur-sm border-b border-navy-200/60">
@@ -704,7 +830,7 @@ export default function App() {
                 Refresh
               </button>
               <button
-                onClick={() => setReviewMode(false)}
+                onClick={returnToAssessmentOverview}
                 className="flex items-center gap-1.5 text-[12px] font-medium px-3 py-1.5 rounded-md bg-navy-800 border border-navy-800 text-white hover:bg-navy-900 transition-colors shadow-sm"
               >
                 Back to Assessment
@@ -905,11 +1031,23 @@ export default function App() {
             </div>
             <div className="flex items-center gap-3">
               <button
-                onClick={() => setReviewMode(true)}
+                onClick={() => {
+                  window.localStorage.removeItem('assessmentOverviewDismissed');
+                  setShowOverview(true);
+                  window.scrollTo(0, 0);
+                }}
                 className="flex items-center gap-1.5 text-[12px] font-medium px-3 py-1.5 rounded-md bg-white border border-navy-200 text-navy-700 hover:bg-navy-100 transition-colors shadow-sm"
               >
-                Review Submissions
+                Overview
               </button>
+              {isReviewer && (
+                <button
+                  onClick={() => setReviewMode(true)}
+                  className="flex items-center gap-1.5 text-[12px] font-medium px-3 py-1.5 rounded-md bg-white border border-navy-200 text-navy-700 hover:bg-navy-100 transition-colors shadow-sm"
+                >
+                  Review Submissions
+                </button>
+              )}
               {lastSaved && (
                 <span className="text-[11px] text-navy-400 hidden sm:block">
                   Saved {lastSaved.toLocaleTimeString()}
@@ -1077,10 +1215,17 @@ export default function App() {
       </main>
 
       {user && (
-        <div className="fixed bottom-3 right-3 bg-navy-900 text-white text-[10px] px-3 py-1.5 rounded-md flex items-center gap-2 opacity-30 hover:opacity-100 transition-opacity">
+        <button
+          type="button"
+          onClick={() => navigator.clipboard?.writeText(user.uid)}
+          title="Click to copy full UID"
+          className="fixed bottom-3 right-3 bg-navy-900 text-white text-[10px] px-3 py-1.5 rounded-md flex items-center gap-2 opacity-40 hover:opacity-100 transition-opacity"
+        >
           <div className="w-1.5 h-1.5 bg-emerald-400 rounded-full" />
-          <span className="text-navy-400">Synced</span>
-        </div>
+          <span className="text-navy-300 break-all max-w-[220px] text-left">{user.uid}</span>
+          <span className="text-navy-500">•</span>
+          <span className="text-navy-400">{isReviewer ? 'Reviewer' : 'Standard'}</span>
+        </button>
       )}
     </div>
   );

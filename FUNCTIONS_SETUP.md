@@ -57,3 +57,39 @@ firebase deploy --only functions
 
 - The trigger includes idempotency protection using `notificationEvents/{eventId}` to avoid duplicate emails on retries.
 - Notification status is written into the submission doc under `notification`.
+
+## Assign reviewer access
+
+The reviewer UI and Firestore rules require a custom auth claim: `reviewer: true`.
+
+1) Authenticate ADC (one time on your machine)
+
+```bash
+gcloud auth application-default login
+```
+
+2) Set reviewer claim by email
+
+```bash
+npm --prefix functions run set-reviewer -- --email seth@ablewealth.co --reviewer true --project awm-01-fc016
+```
+
+3) Remove reviewer claim
+
+```bash
+npm --prefix functions run set-reviewer -- --email seth@ablewealth.co --reviewer false --project awm-01-fc016
+```
+
+After updating claims, the user must sign out/in (or force token refresh) for access changes to take effect.
+
+### If ADC quota-project errors persist
+
+Use a service account key instead of ADC:
+
+1) Create a service account key in GCP IAM for project `awm-01-fc016` with Firebase Auth Admin permissions.
+2) Download the JSON key locally.
+3) Run:
+
+```bash
+npm --prefix functions run set-reviewer -- --email seth@ablewealth.co --reviewer true --project awm-01-fc016 --service-account /absolute/path/to/service-account.json
+```
