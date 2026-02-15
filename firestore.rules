@@ -1,0 +1,30 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isReviewer() {
+      return isSignedIn() && (
+        request.auth.token.reviewer == true ||
+        request.auth.token.admin == true
+      );
+    }
+
+    match /artifacts/{appId}/users/{userId}/submissions/{submissionId} {
+      allow read, write: if isSignedIn() && request.auth.uid == userId;
+    }
+
+    match /artifacts/{appId}/completedAssessments/{submissionDocId} {
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      allow read, list: if isReviewer();
+      allow update, delete: if false;
+
+      match /notificationEvents/{eventId} {
+        allow read: if isReviewer();
+        allow write: if false;
+      }
+    }
+  }
+}
