@@ -28,8 +28,7 @@ import {
   Users,
   Lightbulb,
   Target,
-  CircleDot,
-  ClipboardCheck
+  CircleDot
 } from 'lucide-react';
 
 const firebaseConfig = typeof __firebase_config !== 'undefined'
@@ -304,15 +303,8 @@ export default function App() {
       {/* Sidebar */}
       <aside className="w-full md:w-72 lg:w-80 bg-gray-900 text-white flex flex-col h-auto md:h-screen md:sticky md:top-0 shrink-0">
         <div className="px-5 pt-6 pb-5 border-b border-gray-800">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-lg bg-gray-700 flex items-center justify-center">
-              <ClipboardCheck className="w-5 h-5 text-white" />
-            </div>
-            <div>
-              <h1 className="font-bold text-sm tracking-tight">Able Wealth Management</h1>
-              <p className="text-[11px] text-gray-400">Operations Self-Assessment</p>
-            </div>
-          </div>
+          <h1 className="font-bold text-sm tracking-tight">Able Wealth Management</h1>
+          <p className="text-[11px] text-gray-400">Operations Self-Assessment</p>
         </div>
 
         <nav className="flex-1 overflow-y-auto py-2 px-2">
