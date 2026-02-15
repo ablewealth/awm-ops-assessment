@@ -180,8 +180,8 @@ const RatingInput = ({ value, onChange }) => {
             onClick={() => onChange(num)}
             className={`flex-1 py-3 rounded-lg text-sm font-medium transition-all border
               ${value === num
-                ? 'bg-navy-800 border-navy-800 text-white shadow-sm'
-                : 'bg-white border-navy-200 text-navy-400 hover:border-navy-400 hover:text-navy-600'}`}
+                ? 'bg-gray-900 border-gray-900 text-white shadow-sm'
+                : 'bg-white border-gray-200 text-gray-400 hover:border-gray-400 hover:text-gray-600'}`}
           >
             {num}
           </button>
@@ -189,7 +189,7 @@ const RatingInput = ({ value, onChange }) => {
       </div>
       <div className="flex justify-between mt-2 px-1">
         {RATING_LABELS.map((label, i) => (
-          <span key={label} className={`text-[10px] font-medium ${value === i + 1 ? 'text-navy-800' : 'text-navy-300'}`}>
+          <span key={label} className={`text-[10px] font-medium ${value === i + 1 ? 'text-gray-900' : 'text-gray-300'}`}>
             {label}
           </span>
         ))}
@@ -288,9 +288,9 @@ export default function App() {
 
   if (!isLoaded) {
     return (
-      <div className="h-screen w-full flex flex-col items-center justify-center bg-navy-50">
-        <Loader2 className="w-8 h-8 animate-spin mb-4 text-navy-600" />
-        <p className="text-sm font-medium text-navy-600">Loading your assessment...</p>
+      <div className="h-screen w-full flex flex-col items-center justify-center bg-gray-50">
+        <Loader2 className="w-8 h-8 animate-spin mb-4 text-gray-600" />
+        <p className="text-sm font-medium text-gray-600">Loading your assessment...</p>
       </div>
     );
   }
@@ -300,17 +300,17 @@ export default function App() {
   const progress = sectionProgress[activeSection];
 
   return (
-    <div className="min-h-screen bg-navy-50 font-sans text-navy-900 flex flex-col md:flex-row">
+    <div className="min-h-screen bg-gray-50 font-sans text-gray-900 flex flex-col md:flex-row">
       {/* Sidebar */}
-      <aside className="w-full md:w-72 lg:w-80 bg-navy-900 text-white flex flex-col h-auto md:h-screen md:sticky md:top-0 shrink-0">
-        <div className="px-5 pt-6 pb-5 border-b border-navy-800">
+      <aside className="w-full md:w-72 lg:w-80 bg-gray-900 text-white flex flex-col h-auto md:h-screen md:sticky md:top-0 shrink-0">
+        <div className="px-5 pt-6 pb-5 border-b border-gray-800">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-lg bg-navy-700 flex items-center justify-center">
-              <ClipboardCheck className="w-5 h-5 text-teal-400" />
+            <div className="w-9 h-9 rounded-lg bg-gray-700 flex items-center justify-center">
+              <ClipboardCheck className="w-5 h-5 text-white" />
             </div>
             <div>
               <h1 className="font-bold text-sm tracking-tight">Able Wealth Management</h1>
-              <p className="text-[11px] text-navy-400">Operations Self-Assessment</p>
+              <p className="text-[11px] text-gray-400">Operations Self-Assessment</p>
             </div>
           </div>
         </div>
@@ -327,19 +327,19 @@ export default function App() {
                 onClick={() => { setActiveSection(idx); window.scrollTo(0, 0); }}
                 className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-all group mb-0.5
                   ${isActive
-                    ? 'bg-navy-800 text-white'
-                    : 'text-navy-300 hover:bg-navy-800/50 hover:text-white'
+                    ? 'bg-gray-800 text-white'
+                    : 'text-gray-400 hover:bg-gray-800/50 hover:text-white'
                   }`}
               >
                 <div className={`w-7 h-7 rounded-md flex items-center justify-center shrink-0
-                  ${isActive ? 'bg-teal-500/20 text-teal-400' : isDone ? 'bg-emerald-500/15 text-emerald-400' : 'bg-navy-700/50 text-navy-400'}`}>
+                  ${isActive ? 'bg-white/15 text-white' : isDone ? 'bg-white/10 text-gray-300' : 'bg-gray-700/50 text-gray-500'}`}>
                   {isDone ? <CheckCircle className="w-4 h-4" /> : <Icon className="w-4 h-4" />}
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className={`text-[13px] truncate ${isActive ? 'font-semibold' : 'font-medium'}`}>
                     {section.title}
                   </p>
-                  <p className={`text-[10px] mt-0.5 ${isDone ? 'text-emerald-400' : 'text-navy-500'}`}>
+                  <p className={`text-[10px] mt-0.5 ${isDone ? 'text-gray-300' : 'text-gray-500'}`}>
                     {prog.completed} of {prog.total} complete
                   </p>
                 </div>
@@ -348,43 +348,43 @@ export default function App() {
           })}
         </nav>
 
-        <div className="px-4 py-4 border-t border-navy-800">
-          <div className="flex justify-between text-[11px] font-medium text-navy-400 mb-2">
+        <div className="px-4 py-4 border-t border-gray-800">
+          <div className="flex justify-between text-[11px] font-medium text-gray-400 mb-2">
             <span>Overall Progress</span>
             <span className="text-white">{globalProgress.completed} / {globalProgress.total}</span>
           </div>
-          <div className="w-full bg-navy-800 h-1.5 rounded-full overflow-hidden">
+          <div className="w-full bg-gray-800 h-1.5 rounded-full overflow-hidden">
             <div
-              className="h-full bg-teal-500 rounded-full transition-all duration-500"
+              className="h-full bg-white rounded-full transition-all duration-500"
               style={{ width: `${globalProgress.percent}%` }}
             />
           </div>
-          <p className="text-[10px] text-navy-500 mt-2">{globalProgress.percent}% complete</p>
+          <p className="text-[10px] text-gray-500 mt-2">{globalProgress.percent}% complete</p>
         </div>
       </aside>
 
       {/* Main */}
       <main className="flex-1 overflow-y-auto">
         {/* Top bar */}
-        <div className="sticky top-0 z-10 bg-navy-50/95 backdrop-blur-sm border-b border-navy-200/60">
+        <div className="sticky top-0 z-10 bg-gray-50/95 backdrop-blur-sm border-b border-gray-200/60">
           <div className="max-w-3xl mx-auto px-5 md:px-10 py-3 flex items-center justify-between">
-            <div className="flex items-center gap-2 text-[12px] text-navy-500">
+            <div className="flex items-center gap-2 text-[12px] text-gray-500">
               <span className="font-medium">Section {activeSection + 1}</span>
-              <span className="text-navy-300">/</span>
+              <span className="text-gray-300">/</span>
               <span>{SECTIONS.length}</span>
-              <span className="mx-2 text-navy-200">|</span>
-              <span className="text-navy-400">{progress.completed} of {progress.total} answered</span>
+              <span className="mx-2 text-gray-200">|</span>
+              <span className="text-gray-400">{progress.completed} of {progress.total} answered</span>
             </div>
             <div className="flex items-center gap-3">
               {lastSaved && (
-                <span className="text-[11px] text-navy-400 hidden sm:block">
+                <span className="text-[11px] text-gray-400 hidden sm:block">
                   Saved {lastSaved.toLocaleTimeString()}
                 </span>
               )}
               <button
                 onClick={() => saveProgress()}
                 disabled={saving}
-                className="flex items-center gap-1.5 text-[12px] font-medium px-3 py-1.5 rounded-md bg-white border border-navy-200 text-navy-700 hover:bg-navy-100 disabled:opacity-40 transition-colors shadow-sm"
+                className="flex items-center gap-1.5 text-[12px] font-medium px-3 py-1.5 rounded-md bg-white border border-gray-200 text-gray-700 hover:bg-gray-100 disabled:opacity-40 transition-colors shadow-sm"
               >
                 {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
                 Save Progress
@@ -398,25 +398,25 @@ export default function App() {
           {/* Section header */}
           <div className="mb-8">
             <div className="flex items-start gap-4 mb-4">
-              <div className="w-11 h-11 rounded-xl bg-navy-800 flex items-center justify-center shrink-0">
-                <SectionIcon className="w-5 h-5 text-teal-400" />
+              <div className="w-11 h-11 rounded-xl bg-gray-900 flex items-center justify-center shrink-0">
+                <SectionIcon className="w-5 h-5 text-white" />
               </div>
               <div>
-                <h2 className="text-xl md:text-2xl font-bold text-navy-900 leading-tight">
+                <h2 className="text-xl md:text-2xl font-bold text-gray-900 leading-tight">
                   {currentSection.title}
                 </h2>
                 <div className="flex items-center gap-2 mt-1.5">
-                  <div className="w-16 bg-navy-200 h-1 rounded-full overflow-hidden">
+                  <div className="w-16 bg-gray-200 h-1 rounded-full overflow-hidden">
                     <div
-                      className={`h-full rounded-full transition-all duration-500 ${progress.percent === 100 ? 'bg-emerald-500' : 'bg-teal-500'}`}
+                      className={`h-full rounded-full transition-all duration-500 bg-gray-900`}
                       style={{ width: `${progress.percent}%` }}
                     />
                   </div>
-                  <span className="text-[11px] text-navy-400 font-medium">{progress.completed}/{progress.total}</span>
+                  <span className="text-[11px] text-gray-400 font-medium">{progress.completed}/{progress.total}</span>
                 </div>
               </div>
             </div>
-            <p className="text-sm text-navy-500 leading-relaxed bg-white border border-navy-100 rounded-lg px-4 py-3">
+            <p className="text-sm text-gray-500 leading-relaxed bg-white border border-gray-100 rounded-lg px-4 py-3">
               {currentSection.description}
             </p>
           </div>
@@ -424,19 +424,19 @@ export default function App() {
           {/* Questions */}
           <div className="space-y-5">
             {currentSection.questions.map((q, qIdx) => (
-              <div key={q.id} className="bg-white rounded-xl border border-navy-100 shadow-sm overflow-hidden">
+              <div key={q.id} className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
                 <div className="px-5 pt-5 pb-4">
                   <div className="flex items-start gap-3 mb-3">
-                    <span className="text-[11px] font-bold text-navy-300 bg-navy-50 rounded px-1.5 py-0.5 shrink-0 tabular-nums mt-0.5">
+                    <span className="text-[11px] font-bold text-gray-400 bg-gray-50 rounded px-1.5 py-0.5 shrink-0 tabular-nums mt-0.5">
                       {activeSection + 1}.{qIdx + 1}
                     </span>
-                    <label className="block text-[15px] font-medium text-navy-800 leading-snug">
+                    <label className="block text-[15px] font-medium text-gray-800 leading-snug">
                       {q.label}
                     </label>
                   </div>
 
                   {q.hint && (
-                    <p className="text-[12px] text-navy-400 italic ml-9 mb-3 leading-relaxed">
+                    <p className="text-[12px] text-gray-400 italic ml-9 mb-3 leading-relaxed">
                       {q.hint}
                     </p>
                   )}
@@ -448,13 +448,13 @@ export default function App() {
                         onChange={(e) => updateResponse(q.id, e.target.value)}
                         rows={4}
                         placeholder="Type your response here..."
-                        className="w-full p-3 border border-navy-200 rounded-lg text-sm leading-relaxed focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition-all outline-none resize-none bg-navy-50/30 placeholder:text-navy-300"
+                        className="w-full p-3 border border-gray-200 rounded-lg text-sm leading-relaxed focus:ring-2 focus:ring-gray-400/20 focus:border-gray-900 transition-all outline-none resize-none bg-gray-50/30 placeholder:text-gray-300"
                       />
                     )}
 
                     {q.type === 'text' && (
                       <div className="relative">
-                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-navy-300">
+                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-300">
                           <ArrowUpRight className="w-4 h-4" />
                         </div>
                         <input
@@ -462,7 +462,7 @@ export default function App() {
                           value={responses[q.id] || ''}
                           onChange={(e) => updateResponse(q.id, e.target.value)}
                           placeholder="Paste a link or type a brief reference..."
-                          className="w-full pl-10 pr-4 py-2.5 border border-navy-200 rounded-lg text-sm focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition-all outline-none bg-navy-50/30 placeholder:text-navy-300"
+                          className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-gray-400/20 focus:border-gray-900 transition-all outline-none bg-gray-50/30 placeholder:text-gray-300"
                         />
                       </div>
                     )}
@@ -478,7 +478,7 @@ export default function App() {
 
                 {/* Completion indicator bar */}
                 {responses[q.id] && (
-                  <div className="h-0.5 bg-teal-500" />
+                  <div className="h-0.5 bg-gray-900" />
                 )}
               </div>
             ))}
@@ -492,7 +492,7 @@ export default function App() {
                 window.scrollTo(0, 0);
               }}
               disabled={activeSection === 0}
-              className="flex items-center gap-2 text-sm font-medium text-navy-400 hover:text-navy-700 disabled:opacity-0 transition-colors"
+              className="flex items-center gap-2 text-sm font-medium text-gray-400 hover:text-gray-700 disabled:opacity-0 transition-colors"
             >
               <ChevronLeft className="w-4 h-4" />
               Previous
@@ -505,7 +505,7 @@ export default function App() {
                   setActiveSection(activeSection + 1);
                   window.scrollTo(0, 0);
                 }}
-                className="flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold bg-navy-800 text-white hover:bg-navy-900 transition-colors shadow-sm"
+                className="flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold bg-gray-900 text-white hover:bg-black transition-colors shadow-sm"
               >
                 Continue to Next Section
                 <ChevronRight className="w-4 h-4" />
@@ -516,7 +516,7 @@ export default function App() {
                   saveProgress();
                   alert("Assessment progress saved successfully for final review.");
                 }}
-                className="flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold bg-teal-600 text-white hover:bg-teal-700 transition-colors shadow-sm"
+                className="flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold bg-gray-900 text-white hover:bg-black transition-colors shadow-sm"
               >
                 <CheckCircle className="w-4 h-4" />
                 Submit for Review
@@ -527,9 +527,9 @@ export default function App() {
       </main>
 
       {user && (
-        <div className="fixed bottom-3 right-3 bg-navy-900 text-white text-[10px] px-3 py-1.5 rounded-md flex items-center gap-2 opacity-30 hover:opacity-100 transition-opacity">
-          <div className="w-1.5 h-1.5 bg-emerald-400 rounded-full" />
-          <span className="text-navy-400">Synced</span>
+        <div className="fixed bottom-3 right-3 bg-gray-900 text-white text-[10px] px-3 py-1.5 rounded-md flex items-center gap-2 opacity-30 hover:opacity-100 transition-opacity">
+          <div className="w-1.5 h-1.5 bg-gray-300 rounded-full" />
+          <span className="text-gray-400">Synced</span>
         </div>
       )}
     </div>
